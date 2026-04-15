@@ -1,0 +1,31 @@
+# ── Secrets ───────────────────────────────────────
+.env
+tokens.json
+
+# ── Personal data (generated at runtime) ──────────
+dashboard-data.json
+
+# ── Python ────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# ── Node (legacy, no longer used) ─────────────────
+node_modules/
+package-lock.json
+
+# ── Editor ────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ── OS ────────────────────────────────────────────
+.DS_Store
+Thumbs.db

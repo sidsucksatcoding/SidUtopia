@@ -1,0 +1,2371 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sid's Utopia</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #09071a;
+        --surface: #110e24;
+        --surface2: #1b1735;
+        --border: #2d2850;
+        --accent: #7c6af7;
+        --accent2: #4ecdc4;
+        --accent3: #f7c948;
+        --accent4: #f76a6a;
+        --accent5: #4a9eff;
+        --accent6: #ff4a6a;
+        --text: #eeeeff;
+        --muted: #8880b8;
+        --radius: 12px;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      /* ── COSMIC BACKGROUND ── */
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* Star canvas — single GPU-accelerated element replaces 2000 divs */
+      #star-canvas {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      /* Galaxies + shooting stars live in this overlay */
+      #star-field {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      /* ── GALAXIES ── */
+      .galaxy {
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+        animation: galaxyBreath 9s ease-in-out infinite alternate;
+      }
+      @keyframes galaxyBreath {
+        from { opacity: 0.65; }
+        to   { opacity: 1; }
+      }
+
+      /* ── SHOOTING STARS ── */
+      .shooting-star {
+        position: absolute;
+        height: 1.5px;
+        border-radius: 2px;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.35) 40%, white);
+        pointer-events: none;
+        box-shadow: 0 0 4px 1px rgba(200,200,255,0.3);
+        will-change: transform, opacity;
+        animation: shoot var(--d, 0.7s) ease-out forwards;
+      }
+      @keyframes shoot {
+        0%   { opacity: 0;   transform: rotate(-42deg) translateX(0); }
+        8%   { opacity: 1; }
+        75%  { opacity: 0.8; }
+        100% { opacity: 0;   transform: rotate(-42deg) translateX(-750px); }
+      }
+
+      /* Nebula blobs — purple top-right, blue bottom-left, red accent */
+      body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        background:
+          radial-gradient(ellipse at 85% 10%, rgba(100,55,230,0.30) 0%, transparent 50%),
+          radial-gradient(ellipse at 15% 85%, rgba(30,90,220,0.22) 0%, transparent 45%),
+          radial-gradient(ellipse at 60% 50%, rgba(120,40,200,0.10) 0%, transparent 55%),
+          radial-gradient(ellipse at 5%  15%, rgba(200,40,80,0.12)  0%, transparent 35%);
+        pointer-events: none;
+      }
+
+      /* Everything on top of background effects */
+      #login-screen, #app { position: relative; z-index: 1; }
+
+      /* ── LOGIN ── */
+      #login-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        gap: 1.5rem;
+        text-align: center;
+      }
+
+      .connect-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: white;
+        color: #333;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        transition: opacity 0.2s;
+      }
+      .connect-btn:hover { opacity: 0.9; }
+      .connect-btn svg { width: 20px; height: 20px; }
+
+      /* ── MAIN APP ── */
+      #app { display: none; flex-direction: column; min-height: 100vh; }
+
+      /* ── HEADER ── */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 2rem;
+        border-bottom: 1px solid var(--border);
+        background: rgba(11, 9, 28, 0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      /* Rainbow gradient line under the header */
+      header::after {
+        content: '';
+        position: absolute;
+        bottom: -1px; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg,
+          var(--accent),
+          var(--accent5),
+          var(--accent2),
+          var(--accent3),
+          var(--accent4),
+          var(--accent6),
+          var(--accent));
+        background-size: 200% 100%;
+        animation: shimmer 6s linear infinite;
+      }
+
+      @keyframes shimmer {
+        0%   { background-position: 0% 0; }
+        100% { background-position: 200% 0; }
+      }
+
+      .header-left { display: flex; align-items: center; gap: 1rem; }
+
+      .logo {
+        font-size: 1.1rem;
+        font-weight: 600;
+        font-family: 'DM Mono', monospace;
+        background: linear-gradient(90deg, var(--accent), var(--accent5), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: -0.3px;
+      }
+
+      .google-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        padding: 0.3rem 0.8rem;
+        border-radius: 6px;
+      }
+
+      .status-dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: var(--accent4);
+      }
+      .status-dot.connected { background: var(--accent2); }
+
+      .user-info { display: flex; align-items: center; gap: 0.6rem; }
+
+      .avatar {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        background: var(--accent);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px; font-weight: 600; color: white;
+      }
+
+      .user-name { font-size: 0.9rem; color: var(--muted); }
+
+      .sign-out-btn {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 0.3rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        transition: all 0.2s;
+      }
+      .sign-out-btn:hover { border-color: var(--accent4); color: var(--accent4); }
+
+      /* ── TABS ── */
+      .tab-bar {
+        display: flex;
+        gap: 0.25rem;
+        padding: 0 2rem;
+        background: rgba(17, 14, 36, 0.95);
+        border-bottom: 1px solid var(--border);
+        overflow-x: auto;
+      }
+
+      .tab {
+        padding: 0.95rem 1.5rem;
+        font-size: 0.97rem;
+        font-weight: 500;
+        color: var(--muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        transition: color 0.25s cubic-bezier(0.4,0,0.2,1), border-color 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.2s cubic-bezier(0.4,0,0.2,1);
+        background: none;
+        border-top: none;
+        border-left: none;
+        border-right: none;
+        font-family: 'DM Sans', sans-serif;
+      }
+
+      .tab:hover { color: var(--text); transform: translateY(-1px); }
+      .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+      /* ── CONTENT ── */
+      .content { padding: 2.5rem; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+      .tab-panel { display: none; }
+      .tab-panel.active { display: block; }
+
+      /* ── SECTION TITLE ── */
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .section-title { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
+
+      .section-badge {
+        font-size: 0.78rem;
+        font-weight: 500;
+        padding: 0.25rem 0.7rem;
+        border-radius: 20px;
+        font-family: 'DM Mono', monospace;
+      }
+
+      /* ── CARDS ── */
+      .card {
+        background: rgba(17, 14, 36, 0.88);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.6rem;
+        margin-bottom: 1.1rem;
+      }
+
+      .card-title {
+        font-size: 0.88rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 1.1rem;
+      }
+
+      /* ── GOOGLE DATA ITEMS ── */
+      .google-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.85rem;
+        padding: 0.9rem 1rem;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        margin-bottom: 0.6rem;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s cubic-bezier(0.4,0,0.2,1);
+      }
+      .google-item:hover { border-color: var(--accent); transform: translateX(4px); box-shadow: -3px 0 12px rgba(124,106,247,0.15); }
+
+      .google-item-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+      .google-item-body { flex: 1; min-width: 0; }
+      .google-item-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .google-item-sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.15rem; }
+      .google-item-time { font-size: 0.78rem; color: var(--muted); font-family: 'DM Mono', monospace; flex-shrink: 0; }
+
+      .card-header-row { display: flex; align-items: center; margin-bottom: 1.1rem; }
+
+      .refresh-btn {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 0.3rem 0.8rem;
+        border-radius: 7px;
+        font-size: 0.82rem;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s cubic-bezier(0.4,0,0.2,1);
+        margin-left: auto;
+      }
+      .refresh-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 8px rgba(124,106,247,0.2); }
+
+      /* ── LINKS ── */
+      .link-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.75rem;
+      }
+
+      .link-item {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.85rem 1.1rem;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--text);
+        font-size: 0.93rem;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s cubic-bezier(0.4,0,0.2,1);
+        position: relative;
+        padding-right: 1.8rem;
+      }
+
+      .link-item:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(124,106,247,0.2); }
+
+      .link-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+      .link-remove-btn {
+        position: absolute;
+        top: 50%; right: 0.5rem;
+        transform: translateY(-50%);
+        background: none; border: none;
+        color: var(--muted); cursor: pointer;
+        font-size: 0.85rem; opacity: 0;
+        transition: opacity 0.2s; padding: 0.2rem;
+      }
+      .link-item:hover .link-remove-btn { opacity: 1; }
+      .link-remove-btn:hover { color: var(--accent4); }
+
+      .link-add-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+
+      /* ── INPUTS ── */
+      .todo-input-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+
+      .todo-input {
+        flex: 1;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        padding: 0.75rem 1.1rem;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.97rem;
+        outline: none;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s cubic-bezier(0.4,0,0.2,1);
+      }
+      .todo-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,106,247,0.12); }
+      .todo-input::placeholder { color: var(--muted); }
+
+      .btn {
+        padding: 0.75rem 1.3rem;
+        border-radius: 9px;
+        border: none;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.97rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: transform 0.2s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+      }
+      .btn-primary { background: var(--accent); color: white; }
+      .btn-primary:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(124,106,247,0.4); }
+      .btn-danger { background: none; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.7rem; font-size: 0.85rem; }
+      .btn-danger:hover { border-color: var(--accent4); color: var(--accent4); box-shadow: 0 0 8px rgba(247,106,106,0.2); }
+
+      /* ── TODO ── */
+      .todo-item { display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem; border-radius: 10px; transition: background 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1); }
+      .todo-item:hover { background: var(--surface2); transform: translateX(4px); }
+
+      .todo-check {
+        width: 20px; height: 20px;
+        border-radius: 50%;
+        border: 2px solid var(--border);
+        cursor: pointer; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+      }
+      .todo-check:hover { border-color: var(--accent2); transform: scale(1.15); }
+      .todo-check.checked { background: var(--accent2); border-color: var(--accent2); }
+      .todo-check.checked::after { content: '✓'; font-size: 12px; color: white; font-weight: 700; }
+
+      .todo-text { flex: 1; font-size: 0.98rem; }
+      .todo-text.done { text-decoration: line-through; color: var(--muted); }
+
+      /* ── ACTION ITEMS ── */
+      .action-item {
+        display: flex; align-items: flex-start; gap: 0.85rem;
+        padding: 1rem 1.1rem; border-radius: 10px;
+        border: 1px solid var(--border); background: var(--surface2); margin-bottom: 0.7rem;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s cubic-bezier(0.4,0,0.2,1);
+      }
+      .action-item:hover { border-color: rgba(124,106,247,0.4); transform: translateX(4px); box-shadow: -3px 0 14px rgba(124,106,247,0.12); }
+      .action-item .todo-check { margin-top: 2px; }
+      .action-body { flex: 1; }
+      .action-title { font-size: 0.97rem; margin-bottom: 0.25rem; }
+      .action-link { font-size: 0.82rem; color: var(--accent); text-decoration: none; font-family: 'DM Mono', monospace; }
+      .action-link:hover { text-decoration: underline; }
+
+      /* ── KANBAN ── */
+      .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+
+      .kanban-col {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 1.25rem; min-height: 340px;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1);
+      }
+      .kanban-col:hover { border-color: rgba(124,106,247,0.25); }
+
+      .kanban-col-header {
+        display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.1rem;
+        font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.07em; color: var(--muted);
+      }
+      .kanban-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+      .kanban-card {
+        background: var(--surface2); border: 1px solid var(--border);
+        border-radius: 10px; padding: 0.95rem; margin-bottom: 0.7rem;
+        font-size: 0.93rem; position: relative;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s cubic-bezier(0.4,0,0.2,1);
+      }
+      .kanban-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 6px 20px rgba(124,106,247,0.2); }
+
+      .kanban-card .delete-card {
+        position: absolute; top: 0.4rem; right: 0.5rem;
+        background: none; border: none; color: var(--muted);
+        cursor: pointer; font-size: 0.85rem; opacity: 0; transition: opacity 0.2s;
+      }
+      .kanban-card:hover .delete-card { opacity: 1; }
+      .delete-card:hover { color: var(--accent4) !important; }
+
+      .kanban-add-row { display: flex; gap: 0.5rem; margin-top: 0.9rem; }
+
+      .kanban-input {
+        flex: 1; background: var(--bg); border: 1px solid var(--border);
+        border-radius: 7px; padding: 0.55rem 0.85rem; color: var(--text);
+        font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1);
+      }
+      .kanban-input:focus { border-color: var(--accent); }
+      .kanban-input::placeholder { color: var(--muted); }
+
+      .btn-small {
+        padding: 0.55rem 0.9rem; border-radius: 7px; border: none;
+        background: var(--accent); color: white; font-size: 0.9rem;
+        cursor: pointer; font-family: 'DM Sans', sans-serif;
+        transition: transform 0.2s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s;
+      }
+      .btn-small:hover { transform: scale(1.05); box-shadow: 0 3px 10px rgba(124,106,247,0.35); }
+
+      /* ── EXAMS ── */
+      .exam-add-form { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+
+      .exam-input {
+        background: var(--surface2); border: 1px solid var(--border);
+        border-radius: 8px; padding: 0.6rem 1rem; color: var(--text);
+        font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; transition: border-color 0.2s;
+      }
+      .exam-input:focus { border-color: var(--accent3); }
+      .exam-input::placeholder { color: var(--muted); }
+      .exam-input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
+      .exam-name-input { flex: 2; min-width: 160px; }
+      .exam-subject-input { flex: 1; min-width: 120px; }
+
+      .exam-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+      .exam-item {
+        display: flex; align-items: center; gap: 1rem;
+        padding: 1rem 1.25rem; background: var(--surface2);
+        border: 1px solid var(--border); border-radius: 10px; transition: border-color 0.2s;
+      }
+      .exam-item:hover { border-color: var(--accent3); }
+
+      .exam-countdown {
+        font-family: 'DM Mono', monospace; font-size: 0.78rem; font-weight: 500;
+        padding: 0.2rem 0.6rem; border-radius: 6px; min-width: 70px; text-align: center;
+      }
+      .days-soon { background: #f76a6a22; color: var(--accent4); }
+      .days-medium { background: #f7c94822; color: var(--accent3); }
+      .days-far { background: #4ecdc422; color: var(--accent2); }
+
+      .exam-info { flex: 1; }
+      .exam-name { font-size: 0.95rem; font-weight: 500; }
+      .exam-subject { font-size: 0.78rem; color: var(--muted); margin-top: 0.1rem; }
+      .exam-date { font-size: 0.8rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+      /* ── CALENDAR GRID ── */
+      .cal-nav {
+        display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem;
+      }
+      .cal-nav-btn {
+        background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+        padding: 0.38rem 1rem; border-radius: 8px; cursor: pointer; font-size: 1.1rem;
+        font-family: 'DM Sans', sans-serif;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.2s cubic-bezier(0.4,0,0.2,1);
+      }
+      .cal-nav-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px rgba(124,106,247,0.25); transform: scale(1.06); }
+      .cal-month-label { font-size: 1.05rem; font-weight: 600; color: var(--text); }
+      .cal-grid {
+        display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+      }
+      .cal-dow {
+        text-align: center; font-size: 0.72rem; font-weight: 600; color: var(--muted);
+        text-transform: uppercase; letter-spacing: 0.05em; padding: 0.35rem 0 0.45rem;
+      }
+      .cal-day {
+        min-height: 76px; background: var(--surface2); border: 1px solid var(--border);
+        border-radius: 8px; padding: 0.4rem 0.35rem 0.25rem;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1);
+        overflow: hidden;
+      }
+      .cal-day:hover { border-color: rgba(124,106,247,0.55); box-shadow: 0 2px 10px rgba(124,106,247,0.1); transform: scale(1.02); }
+      .cal-empty { background: transparent !important; border-color: transparent !important; }
+      .cal-today { border-color: var(--accent) !important; background: rgba(124,106,247,0.09) !important; }
+      .cal-day-num {
+        display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-bottom: 0.2rem;
+      }
+      .cal-today .cal-day-num { color: var(--accent); }
+      .cal-event-chip {
+        display: flex; align-items: center; justify-content: space-between;
+        font-size: 0.62rem; background: rgba(124,106,247,0.22); color: var(--accent);
+        border-radius: 3px; padding: 0.08rem 0.18rem 0.08rem 0.28rem; margin-bottom: 2px;
+        white-space: nowrap; overflow: hidden; max-width: 100%; cursor: default;
+      }
+      .cal-event-chip span { overflow: hidden; text-overflow: ellipsis; flex: 1; }
+      .cal-chip-del {
+        display: none; background: none; border: none; cursor: pointer;
+        color: inherit; font-size: 0.7rem; padding: 0 0 0 3px; opacity: 0.75; line-height: 1; flex-shrink: 0;
+      }
+      .cal-event-chip:hover .cal-chip-del { display: block; }
+      .cal-more { font-size: 0.6rem; color: var(--muted); padding: 0.05rem 0.2rem; }
+      .cal-loading { color: var(--muted); font-size: 0.85rem; padding: 2rem; text-align: center; font-family: 'DM Mono', monospace; }
+      .events-section-divider {
+        margin: 1.5rem 0 1rem; border: none; border-top: 1px solid var(--border);
+      }
+
+      /* ── MISC ── */
+      .empty { text-align: center; color: var(--muted); font-size: 0.88rem; padding: 2rem; }
+      .loading { color: var(--muted); font-size: 0.85rem; padding: 1rem; font-family: 'DM Mono', monospace; }
+      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+      @media (max-width: 700px) {
+        .kanban { grid-template-columns: 1fr; }
+        .two-col { grid-template-columns: 1fr; }
+        header { padding: 1rem; }
+        .content { padding: 1rem; }
+      }
+      details[open] summary span { transform: rotate(90deg); display: inline-block; }
+
+      /* ── ANIMATIONS ── */
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(12px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+      .tab-panel.active { animation: fadeInUp 0.55s cubic-bezier(0.22,1,0.36,1); }
+      #login-screen { animation: fadeIn 0.4s ease; }
+
+      .card {
+        transition: border-color 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s cubic-bezier(0.4,0,0.2,1);
+      }
+      .card:hover {
+        border-color: rgba(124, 106, 247, 0.28);
+        box-shadow: 0 4px 24px rgba(124,106,247,0.08);
+      }
+
+      .exam-item { transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1); }
+      .exam-item:hover { border-color: var(--accent3); box-shadow: 0 3px 14px rgba(247,201,72,0.12); transform: translateX(3px); }
+      /* ── TIMESHEET ── */
+      .timesheet-month { margin-bottom: 1rem; }
+      .timesheet-month summary {
+        cursor: pointer; font-weight: 600; padding: 0.9rem 1.2rem;
+        background: var(--card-bg); border-radius: 0.6rem;
+        border: 1px solid var(--border); list-style: none;
+        display: flex; align-items: center; gap: 0.6rem; user-select: none;
+        color: var(--text); font-size: 1.05rem;
+        transition: background 0.2s, border-color 0.2s;
+      }
+      .timesheet-month summary:hover { background: rgba(255,255,255,0.04); }
+      .timesheet-month summary::-webkit-details-marker { display: none; }
+      .ts-arrow { font-size: 0.7rem; color: var(--muted); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); display: inline-block; }
+      .timesheet-month[open] .ts-arrow { transform: rotate(90deg); }
+      .timesheet-table-wrap { overflow-x: auto; margin-top: 0.6rem; padding-bottom: 0.5rem; }
+      .timesheet-month > div { animation: tsOpen 0.28s cubic-bezier(0.4,0,0.2,1); }
+      @keyframes tsOpen { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+      .timesheet-table { border-collapse: collapse; font-size: 0.95rem; min-width: 100%; }
+      .timesheet-table th {
+        padding: 0.5rem 0.75rem; text-align: center; color: var(--muted);
+        font-weight: 500; font-size: 0.82rem; white-space: nowrap;
+        border-bottom: 1px solid var(--border);
+      }
+      .timesheet-table th.ts-act-header { text-align: left; }
+      .timesheet-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: center; }
+      .timesheet-table td.ts-act-cell {
+        text-align: left; font-weight: 500; white-space: nowrap;
+        position: sticky; left: 0; background: var(--surface); z-index: 1;
+        padding-right: 1.25rem; font-size: 0.92rem;
+      }
+      .ts-cell {
+        display: inline-block; min-width: 3.4rem; padding: 0.25rem 0.45rem;
+        border-radius: 0.3rem; border: 1px solid transparent;
+        cursor: text; color: var(--muted); font-family: 'DM Mono', monospace;
+        font-size: 0.9rem; transition: border-color 0.2s cubic-bezier(0.4,0,0.2,1), background 0.2s cubic-bezier(0.4,0,0.2,1);
+        text-align: center;
+      }
+      .ts-cell:not(:empty) { color: var(--text); }
+      .ts-cell:focus { outline: none; border-color: var(--accent3); background: rgba(255,255,255,0.07); color: var(--text); }
+      .ts-cell.saving { opacity: 0.4; pointer-events: none; }
+
+      /* ── LOGIN POLISH ── */
+      #login-screen {
+        background: transparent;
+      }
+
+      .login-logo {
+        font-family: 'DM Mono', monospace;
+        font-size: 2rem;
+        font-weight: 600;
+        background: linear-gradient(90deg, var(--accent), var(--accent5), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.4rem;
+        letter-spacing: -1px;
+      }
+
+      .login-card {
+        background: rgba(17, 14, 36, 0.7);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 2.5rem 3rem;
+        text-align: center;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 8px 40px rgba(80, 40, 200, 0.2);
+      }
+
+      /* ── EDIT INLINE ── */
+      .edit-input {
+        background: var(--bg);
+        border: 1px solid var(--accent);
+        border-radius: 6px;
+        padding: 0.3rem 0.6rem;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9rem;
+        outline: none;
+        width: 100%;
+      }
+      .btn-edit {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 0.2rem 0.5rem;
+        border-radius: 5px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        transition: all 0.15s;
+        opacity: 0;
+      }
+      .todo-item:hover .btn-edit,
+      .action-item:hover .btn-edit,
+      .kanban-card:hover .btn-edit { opacity: 1; }
+      .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+
+      /* ── AI CHAT ── */
+      #chat-btn {
+        position: fixed;
+        bottom: 1.75rem;
+        right: 1.75rem;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: none;
+        background: linear-gradient(135deg, var(--accent), var(--accent5));
+        color: white;
+        font-size: 1.3rem;
+        cursor: pointer;
+        z-index: 200;
+        box-shadow: 0 4px 20px rgba(124,106,247,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      #chat-btn:hover {
+        transform: scale(1.08);
+        box-shadow: 0 6px 28px rgba(124,106,247,0.65);
+      }
+
+      #chat-panel {
+        position: fixed;
+        bottom: 5.5rem;
+        right: 1.75rem;
+        width: 360px;
+        height: 520px;
+        background: rgba(13, 11, 28, 0.97);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+        display: none;
+        flex-direction: column;
+        z-index: 200;
+        overflow: hidden;
+        animation: fadeInUp 0.2s ease;
+      }
+      #chat-panel.open { display: flex; }
+
+      .chat-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: rgba(17,14,36,0.9);
+        flex-shrink: 0;
+      }
+      .chat-header-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: var(--accent2);
+        box-shadow: 0 0 6px var(--accent2);
+      }
+      .chat-header-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        flex: 1;
+      }
+      .chat-header-sub {
+        font-size: 0.72rem;
+        color: var(--muted);
+      }
+
+      #chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border) transparent;
+      }
+
+      .chat-msg {
+        max-width: 88%;
+        padding: 0.65rem 0.9rem;
+        border-radius: 12px;
+        font-size: 0.86rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .chat-msg.user {
+        background: linear-gradient(135deg, rgba(124,106,247,0.3), rgba(74,158,255,0.25));
+        border: 1px solid rgba(124,106,247,0.3);
+        align-self: flex-end;
+        color: var(--text);
+      }
+      .chat-msg.ai {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        align-self: flex-start;
+        color: var(--text);
+      }
+      .chat-msg.ai.thinking {
+        color: var(--muted);
+        font-style: italic;
+        font-size: 0.8rem;
+      }
+
+      .chat-action-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        background: rgba(78,205,196,0.12);
+        border: 1px solid rgba(78,205,196,0.3);
+        border-radius: 20px;
+        padding: 0.2rem 0.65rem;
+        font-size: 0.72rem;
+        color: var(--accent2);
+        margin-top: 0.4rem;
+        margin-right: 0.3rem;
+        display: block;
+      }
+
+      .chat-input-row {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-top: 1px solid var(--border);
+        background: rgba(17,14,36,0.9);
+        flex-shrink: 0;
+      }
+      #chat-input {
+        flex: 1;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.55rem 0.85rem;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.88rem;
+        outline: none;
+        transition: border-color 0.2s;
+        resize: none;
+        height: 38px;
+      }
+      #chat-input:focus { border-color: var(--accent); }
+      #chat-input::placeholder { color: var(--muted); }
+      #chat-send {
+        background: linear-gradient(135deg, var(--accent), var(--accent5));
+        border: none;
+        border-radius: 8px;
+        width: 38px;
+        height: 38px;
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: opacity 0.2s;
+      }
+      #chat-send:hover { opacity: 0.85; }
+      #chat-send:disabled { opacity: 0.4; cursor: default; }
+
+      /* ── PREP LINKS ── */
+      .prep-links-section {
+        margin-top: 0.6rem;
+        padding-top: 0.6rem;
+        border-top: 1px solid var(--border);
+      }
+      .prep-link-add-row {
+        display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;
+      }
+      .prep-link-chip {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 20px; padding: 0.2rem 0.7rem 0.2rem 0.5rem;
+        font-size: 0.78rem; margin: 0.2rem 0.2rem 0 0;
+        transition: border-color 0.15s;
+      }
+      .prep-link-chip a { color: var(--accent3); text-decoration: none; }
+      .prep-link-chip a:hover { text-decoration: underline; }
+      .prep-link-chip button {
+        background: none; border: none; color: var(--muted);
+        cursor: pointer; font-size: 0.8rem; line-height: 1; padding: 0;
+        transition: color 0.15s;
+      }
+      .prep-link-chip button:hover { color: var(--accent4); }
+    </style>
+  </head>
+  <body>
+
+  <canvas id="star-canvas"></canvas>
+  <div id="star-field"></div>
+
+  <!-- ── LOGIN SCREEN ── -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">Sid's Utopia</div>
+      <p style="color:var(--muted); margin-bottom:1.8rem; font-size:0.92rem">Your personal command center</p>
+      <button class="connect-btn" onclick="connectGoogle()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Connect Google Account
+      </button>
+      <p style="color:var(--muted); font-size:0.75rem; margin-top:1.2rem">Make sure your server is running first</p>
+    </div>
+  </div>
+
+  <!-- ── MAIN APP ── -->
+  <div id="app">
+    <header>
+      <div class="header-left">
+        <span class="logo">Sid's Utopia</span>
+        <div class="google-status" id="google-status">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Checking...</span>
+        </div>
+      </div>
+      <div class="user-info">
+        <div class="avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-name">...</span>
+        <button class="sign-out-btn" onclick="signOut()">Sign out</button>
+      </div>
+    </header>
+
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('zenith', this)">Zenith</button>
+      <button class="tab" onclick="switchTab('math', this)">Math</button>
+      <button class="tab" onclick="switchTab('coding', this)">Coding</button>
+      <button class="tab" onclick="switchTab('exams', this)">Exams & Events</button>
+      <button class="tab" onclick="switchTab('google', this)">Google Data</button>
+      <button class="tab" onclick="switchTab('timesheet', this)">Timesheet</button>
+    </div>
+
+    <div class="content">
+
+      <!-- ZENITH -->
+      <div class="tab-panel active" id="tab-zenith">
+        <div class="section-header">
+          <span class="section-title">Zenith</span>
+          <span class="section-badge" style="background:#7c6af722; color:var(--accent)">College Counseling</span>
+        </div>
+        <div class="card">
+          <div style="display:flex; align-items:center; margin-bottom:1rem;">
+            <span class="card-title" style="margin:0">From Google Doc</span>
+            <select id="meeting-select" onchange="loadMeetingItems()" style="margin-left:auto; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:0.3rem 0.6rem; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.85rem; outline:none;">
+              <option>Loading meetings...</option>
+            </select>
+            <button class="refresh-btn" onclick="fetchZenithDoc()" style="margin-left:0.5rem">Refresh</button>
+          </div>
+          <div id="zenith-doc-list"><div class="loading">Loading from Google Doc...</div></div>
+        </div>
+          <div class="card">
+          <div class="card-title">Add Action Item</div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <input class="todo-input" id="zenith-title-input" placeholder="Action item title..." style="flex:2; min-width:160px" />
+            <input class="todo-input" id="zenith-link-input" placeholder="Google Doc link (optional)" style="flex:2; min-width:160px" />
+            <button class="btn btn-primary" onclick="addZenithItem()">Add</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Action Items</div>
+          <div id="zenith-list"><div class="empty">No action items yet</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Quick Links</div>
+          <div class="link-add-row">
+            <input class="todo-input" id="zenith-link-label" placeholder="Link name..." style="flex:1; min-width:120px" onkeydown="if(event.key==='Enter') addLink('zenith')" />
+            <input class="todo-input" id="zenith-link-url" placeholder="https://..." style="flex:2; min-width:180px" onkeydown="if(event.key==='Enter') addLink('zenith')" />
+            <button class="btn btn-primary" onclick="addLink('zenith')">Add Link</button>
+          </div>
+          <div class="link-grid" id="zenith-links"></div>
+        </div>
+      </div>
+
+      <!-- MATH -->
+      <div class="tab-panel" id="tab-math">
+        <div class="section-header">
+          <span class="section-title">Math</span>
+          <span class="section-badge" style="background:#4ecdc422; color:var(--accent2)">Studies</span>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">To-Do</div>
+            <div class="todo-input-row">
+              <input class="todo-input" id="math-todo-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter') addMathTodo()" />
+              <button class="btn btn-primary" onclick="addMathTodo()">Add</button>
+            </div>
+            <div id="math-todo-list"><div class="empty">No tasks yet</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Resources</div>
+            <div class="link-add-row">
+              <input class="todo-input" id="math-link-label" placeholder="Link name..." style="flex:1; min-width:100px" onkeydown="if(event.key==='Enter') addLink('math')" />
+              <input class="todo-input" id="math-link-url" placeholder="https://..." style="flex:2; min-width:150px" onkeydown="if(event.key==='Enter') addLink('math')" />
+              <button class="btn btn-primary" onclick="addLink('math')" style="background:var(--accent2); color:#111">Add</button>
+            </div>
+            <div class="link-grid" id="math-links"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CODING -->
+      <div class="tab-panel" id="tab-coding">
+        <div class="section-header">
+          <span class="section-title">Coding Projects</span>
+          <span class="section-badge" style="background:#f7c94822; color:var(--accent3)">Kanban</span>
+        </div>
+        <div class="kanban">
+          <div class="kanban-col">
+            <div class="kanban-col-header"><span class="kanban-dot" style="background:var(--muted)"></span>To Do</div>
+            <div id="kanban-todo"></div>
+            <div class="kanban-add-row">
+              <input class="kanban-input" id="kanban-todo-input" placeholder="New project..." onkeydown="if(event.key==='Enter') addKanban('todo')" />
+              <button class="btn-small" onclick="addKanban('todo')">+</button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-header"><span class="kanban-dot" style="background:var(--accent3)"></span>In Progress</div>
+            <div id="kanban-inprogress"></div>
+            <div class="kanban-add-row">
+              <input class="kanban-input" id="kanban-inprogress-input" placeholder="New project..." onkeydown="if(event.key==='Enter') addKanban('inprogress')" />
+              <button class="btn-small" onclick="addKanban('inprogress')">+</button>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kanban-col-header"><span class="kanban-dot" style="background:var(--accent2)"></span>Done</div>
+            <div id="kanban-done"></div>
+            <div class="kanban-add-row">
+              <input class="kanban-input" id="kanban-done-input" placeholder="New project..." onkeydown="if(event.key==='Enter') addKanban('done')" />
+              <button class="btn-small" onclick="addKanban('done')">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXAMS & EVENTS -->
+      <div class="tab-panel" id="tab-exams">
+        <div class="section-header">
+          <span class="section-title">Exams & Events</span>
+          <span class="section-badge" style="background:#4a9eff22; color:var(--accent5)">Calendar + Exams</span>
+        </div>
+
+        <!-- ── EVENTS (Google Calendar) ── -->
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title" style="margin:0">Google Calendar</span>
+            <button class="refresh-btn" onclick="loadCalendarEvents()">Refresh</button>
+          </div>
+          <div id="cal-container"><div class="cal-loading">Loading calendar...</div></div>
+        </div>
+
+        <hr class="events-section-divider" />
+
+        <!-- ── ADD EVENT ── -->
+        <div class="section-header" style="margin-top:0.5rem">
+          <span class="section-title" style="font-size:1.1rem">Add Event</span>
+          <span class="section-badge" style="background:#4ecdc422; color:var(--accent2)">Saves to Google Calendar</span>
+        </div>
+        <div class="card">
+          <div class="exam-add-form" style="align-items:center">
+            <input class="exam-input" id="ev-name" placeholder="Event name..." style="flex:3; min-width:180px" />
+            <input class="exam-input" id="ev-start" type="date" style="flex:1; min-width:140px" title="Start date" />
+            <span style="color:var(--muted); font-size:0.82rem; white-space:nowrap">to (optional)</span>
+            <input class="exam-input" id="ev-end" type="date" style="flex:1; min-width:140px" title="End date (optional, for multi-day events)" />
+            <button class="btn btn-primary" onclick="addCalendarEvent()" style="background:var(--accent5)">Add to Calendar</button>
+          </div>
+          <div id="ev-status" style="font-size:0.82rem; color:var(--muted); margin-top:0.4rem; min-height:1.1em"></div>
+        </div>
+      </div>
+
+
+      <!-- GOOGLE DATA -->
+      <div class="tab-panel" id="tab-google">
+        <div class="section-header">
+          <span class="section-title">Google Data</span>
+          <span class="section-badge" style="background:#7c6af722; color:var(--accent)">Live from your account</span>
+        </div>
+
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title" style="margin:0">Unread Gmail</span>
+            <div style="display:flex; gap:0.5rem; align-items:center">
+              <a href="https://mail.google.com/" target="_blank" class="refresh-btn" style="text-decoration:none">Open Gmail</a>
+              <button class="refresh-btn" onclick="markAllRead(this)" style="background:rgba(247,106,106,0.12); color:var(--accent4); border-color:rgba(247,106,106,0.3)">Mark All Read</button>
+              <button class="refresh-btn" onclick="loadGmail()">Refresh</button>
+            </div>
+          </div>
+          <div id="gmail-list"><div class="loading">Loading...</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title" style="margin:0">Recent Drive Files</span>
+            <button class="refresh-btn" onclick="loadDrive()">Refresh</button>
+          </div>
+          <div id="drive-list"><div class="loading">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- TIMESHEET -->
+      <div class="tab-panel" id="tab-timesheet">
+        <div class="section-header">
+          <span class="section-title">Timesheet</span>
+          <span class="section-badge" style="background:#4ecdc422; color:var(--accent2)">Synced with Google Sheets</span>
+          <button class="refresh-btn" onclick="loadTimesheet()" style="margin-left:auto">Refresh</button>
+        </div>
+        <div class="card" style="margin-bottom:1rem">
+          <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap">
+            <button id="ts-add-btn" class="btn btn-primary" onclick="addTimesheetMonth()" style="padding:0.35rem 0.9rem; font-size:0.85rem">Add Next Month</button>
+            <span id="ts-add-status" style="font-size:0.8rem; color:var(--muted)"></span>
+          </div>
+        </div>
+        <div id="timesheet-container"><div class="loading">Select this tab to load...</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── AI CHAT ── -->
+  <button id="chat-btn" onclick="toggleChat()" title="Ask AI">✦</button>
+
+  <div id="chat-panel">
+    <div class="chat-header">
+      <div class="chat-header-dot"></div>
+      <div>
+        <div class="chat-header-title">Utopia AI</div>
+        <div class="chat-header-sub">Powered by Groq</div>
+      </div>
+      <button onclick="toggleChat()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0.2rem">✕</button>
+    </div>
+    <div id="chat-messages">
+      <div class="chat-msg ai">Hey Sid! Ask me anything about your dashboard — I can find your tasks, summarize what's coming up, or add new items for you.</div>
+    </div>
+    <div class="chat-input-row">
+      <input id="chat-input" placeholder="Ask anything..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" />
+      <button id="chat-send" onclick="sendChat()">➤</button>
+    </div>
+  </div>
+
+  <script>
+  const SERVER = 'http://localhost:3000';
+
+  // ═══════════════════════════════════════
+  // STATE — now stored on the server so
+  // all your accounts share the same data.
+  // ═══════════════════════════════════════
+  let state = {
+    zenith: [],
+    mathTodos: [],
+    kanban: { todo: [], inprogress: [], done: [] },
+    exams: [],
+    links: { zenith: [], math: [] }
+  };
+
+  // Load dashboard data from the server
+  async function loadStateFromServer() {
+    try {
+      const res = await fetch(`${SERVER}/api/data`);
+      const data = await res.json();
+      state = data;
+      if (!state.links) state.links = { zenith: [], math: [] };
+      renderAll();
+    } catch(e) {
+      console.error('Could not load data from server:', e);
+    }
+  }
+
+  // Save dashboard data back to the server
+  async function saveState() {
+    try {
+      await fetch(`${SERVER}/api/data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+      });
+    } catch(e) {
+      console.error('Could not save:', e);
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // AUTH
+  // ═══════════════════════════════════════
+
+  // Ask server for the Google login URL
+  // then redirect the browser there
+  function connectGoogle() {
+    fetch(`${SERVER}/auth/url`)
+      .then(r => r.json())
+      .then(data => { window.location.href = data.url; })
+      .catch(() => alert('Cannot reach server. Make sure "node server.js" is running in your terminal!'));
+  }
+
+  async function checkAuthStatus() {
+    try {
+      const res = await fetch(`${SERVER}/auth/status`);
+      const data = await res.json();
+      return data.loggedIn;
+    } catch(e) { return false; }
+  }
+
+  async function signOut() {
+    await fetch(`${SERVER}/auth/signout`);
+    localStorage.removeItem('dashboard-user');
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+
+  function showApp(userName) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('app').style.flexDirection = 'column';
+    const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    document.getElementById('user-avatar').textContent = initials;
+    document.getElementById('user-name').textContent = userName;
+    loadStateFromServer();
+    updateStatusIndicator();
+    loadGoogleData();
+    fetchZenithDoc();
+    loadCalendarEvents();
+  }
+
+  async function updateStatusIndicator() {
+    const connected = await checkAuthStatus();
+    document.getElementById('status-dot').classList.toggle('connected', connected);
+    document.getElementById('status-text').textContent = connected ? 'Google connected' : 'Google not connected';
+  }
+
+  // ═══════════════════════════════════════
+  // ON PAGE LOAD
+  // ═══════════════════════════════════════
+  window.addEventListener('load', async () => {
+    const params = new URLSearchParams(window.location.search);
+
+    // Returning from Google OAuth — clean URL and show app
+    if (params.get('auth') === 'success') {
+      window.history.replaceState({}, '', window.location.pathname);
+      let userName = localStorage.getItem('dashboard-user');
+      if (!userName) {
+        userName = prompt('Welcome! What\'s your name?') || 'User';
+        localStorage.setItem('dashboard-user', userName);
+      }
+      showApp(userName);
+      return;
+    }
+
+    // Already logged in from before
+    const savedUser = localStorage.getItem('dashboard-user');
+    const isConnected = await checkAuthStatus();
+    if (savedUser && isConnected) {
+      showApp(savedUser);
+    }
+  });
+
+  // ═══════════════════════════════════════
+  // TABS
+  // ═══════════════════════════════════════
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    // Lazy-load data when switching to relevant tabs
+    if (name === 'exams') loadCalendarEvents();
+    if (name === 'google') loadGoogleData();
+    if (name === 'timesheet') loadTimesheet();
+  }
+
+  // ═══════════════════════════════════════
+  // GOOGLE DATA
+  // Each function fetches from the server
+  // which in turn calls the Google API.
+  // ═══════════════════════════════════════
+  function loadGoogleData() { loadGmail(); loadDrive(); }
+
+  // ── GMAIL ──────────────────────────────────
+  async function loadGmail() {
+    const el = document.getElementById('gmail-list');
+    el.innerHTML = '<div class="loading">Loading Gmail...</div>';
+    try {
+      const res = await fetch(`${SERVER}/api/gmail`);
+      const data = await res.json();
+      if (data.error) { el.innerHTML = `<div class="empty">Error: ${data.error}</div>`; return; }
+      if (!data.messages.length) { el.innerHTML = '<div class="empty">No unread emails ✓</div>'; return; }
+      el.innerHTML = data.messages.map(m => {
+        const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${m.id}`;
+        const from = m.from.replace(/<.*>/, '').trim() || m.from;
+        return `
+          <div class="google-item" style="cursor:pointer" onclick="window.open('${gmailUrl}','_blank')">
+            <span class="google-item-icon">✉</span>
+            <div class="google-item-body" style="flex:1; min-width:0">
+              <div class="google-item-title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${m.subject}</div>
+              <div class="google-item-sub">${from}</div>
+            </div>
+            <span style="font-size:0.7rem; color:var(--muted); white-space:nowrap; margin-left:0.5rem">↗</span>
+          </div>
+        `;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<div class="empty">Could not load — make sure Google is connected</div>';
+    }
+  }
+
+  async function markAllRead(btn) {
+    btn.textContent = 'Marking...';
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${SERVER}/api/gmail/mark-read`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        btn.textContent = `Marked ${data.marked}`;
+        setTimeout(() => { btn.textContent = 'Mark All Read'; btn.disabled = false; loadGmail(); }, 1800);
+      } else {
+        const msg = data.hint || data.error || 'Unknown error';
+        alert('Could not mark as read.\n\n' + msg);
+        btn.textContent = 'Mark All Read'; btn.disabled = false;
+      }
+    } catch(e) {
+      alert('Network error — is the server running?');
+      btn.textContent = 'Mark All Read'; btn.disabled = false;
+    }
+  }
+
+  async function addCalendarEvent() {
+    const name  = document.getElementById('ev-name').value.trim();
+    const start = document.getElementById('ev-start').value;
+    const end   = document.getElementById('ev-end').value;
+    const status = document.getElementById('ev-status');
+    if (!name || !start) { status.textContent = 'Please fill in a name and start date.'; return; }
+    status.style.color = 'var(--muted)';
+    status.textContent = 'Adding event…';
+    try {
+      const res = await fetch(`${SERVER}/api/calendar/add`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name, start, end }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        status.style.color = 'var(--accent2)';
+        status.textContent = '✓ Event added to Google Calendar!';
+        document.getElementById('ev-name').value  = '';
+        document.getElementById('ev-start').value = '';
+        document.getElementById('ev-end').value   = '';
+        setTimeout(() => { status.textContent = ''; loadCalendarEvents(); }, 1800);
+      } else if (data.hint === 'REAUTH') {
+        status.style.color = 'var(--accent4)';
+        status.innerHTML = '⚠ New permissions needed. <a href="#" onclick="signOut();return false;" style="color:var(--accent5)">Sign out</a> and sign back in to grant calendar write access.';
+      } else {
+        status.style.color = 'var(--accent4)';
+        status.textContent = 'Error: ' + (data.error || 'Could not add event');
+      }
+    } catch(e) {
+      status.style.color = 'var(--accent4)';
+      status.textContent = 'Network error. Is the server running?';
+    }
+  }
+
+  async function deleteCalEvent(idx) {
+    const ev = calEvents[idx];
+    if (!ev) return;
+    if (!confirm(`Remove "${ev.title}" from Google Calendar?`)) return;
+    try {
+      const res = await fetch(`${SERVER}/api/calendar/delete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ eventId: ev.id, calendarId: ev.calendarId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadCalendarEvents();
+      } else {
+        alert(data.error || 'Could not delete event.');
+      }
+    } catch(e) {
+      alert('Network error. Is the server running?');
+    }
+  }
+
+  // ── CALENDAR GRID ──────────────────────────
+  let calEvents = [];
+  let calYear  = new Date().getFullYear();
+  let calMonth = new Date().getMonth(); // 0-indexed
+
+  async function loadCalendarEvents() {
+    const el = document.getElementById('cal-container');
+    el.innerHTML = '<div class="cal-loading">Loading calendar...</div>';
+    try {
+      const res = await fetch(`${SERVER}/api/calendar?year=${calYear}&month=${calMonth + 1}`);
+      const data = await res.json();
+      if (data.error) { el.innerHTML = `<div class="cal-loading">Error: ${data.error}</div>`; return; }
+      calEvents = data.events || [];
+      renderCalendarGrid();
+    } catch(e) {
+      el.innerHTML = '<div class="cal-loading">Could not load — make sure Google is connected</div>';
+    }
+  }
+
+  function calPrev() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } loadCalendarEvents(); }
+  function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } loadCalendarEvents(); }
+
+  // Parse a calendar start string to a local Date, handling date-only strings correctly.
+  // "2025-02-11" → local Feb 11 midnight (NOT UTC midnight which shifts the day in some timezones)
+  function calParseDate(start) {
+    if (!start) return null;
+    if (!start.includes('T')) {
+      const [y, m, d] = start.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    return new Date(start);
+  }
+
+  function renderCalendarGrid() {
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+    // Group events by their local date
+    const byDay = {};
+    for (const ev of calEvents) {
+      const d = calParseDate(ev.start);
+      if (!d) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      (byDay[key] = byDay[key] || []).push(ev);
+    }
+
+    const firstDow = new Date(calYear, calMonth, 1).getDay();
+    const totalDays = new Date(calYear, calMonth + 1, 0).getDate();
+
+    let cells = '';
+    for (let i = 0; i < firstDow; i++) cells += '<div class="cal-day cal-empty"></div>';
+
+    for (let d = 1; d <= totalDays; d++) {
+      const key = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isToday = key === todayKey;
+      const evs = byDay[key] || [];
+      const chips = evs.slice(0, 3).map(ev => {
+        const t = ev.title.length > 17 ? ev.title.slice(0, 15) + '…' : ev.title;
+        const c = ev.color || '#7c6af7';
+        const idx = calEvents.indexOf(ev);
+        return `<span class="cal-event-chip" style="background:${c}33; color:${c}" title="${ev.title}"><span>${t}</span><button class="cal-chip-del" onclick="event.stopPropagation(); deleteCalEvent(${idx})">×</button></span>`;
+      }).join('');
+      const more = evs.length > 3 ? `<span class="cal-more">+${evs.length - 3} more</span>` : '';
+      cells += `<div class="cal-day${isToday ? ' cal-today' : ''}"><span class="cal-day-num">${d}</span>${chips}${more}</div>`;
+    }
+
+    document.getElementById('cal-container').innerHTML = `
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+        <span class="cal-month-label">${months[calMonth]} ${calYear}</span>
+        <button class="cal-nav-btn" onclick="calNext()">›</button>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-dow">Su</div><div class="cal-dow">Mo</div><div class="cal-dow">Tu</div>
+        <div class="cal-dow">We</div><div class="cal-dow">Th</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div>
+        ${cells}
+      </div>
+    `;
+  }
+
+  async function loadDrive() {
+    const el = document.getElementById('drive-list');
+    el.innerHTML = '<div class="loading">Loading Drive...</div>';
+    try {
+      const res = await fetch(`${SERVER}/api/drive`);
+      const data = await res.json();
+      if (data.error) { el.innerHTML = `<div class="empty">Error: ${data.error}</div>`; return; }
+      if (!data.files.length) { el.innerHTML = '<div class="empty">No recent files</div>'; return; }
+      const typeLabel = {
+        'application/vnd.google-apps.document': 'Doc',
+        'application/vnd.google-apps.spreadsheet': 'Sheet',
+        'application/vnd.google-apps.presentation': 'Slides',
+        'application/vnd.google-apps.folder': 'Folder',
+        'application/pdf': 'PDF'
+      };
+      el.innerHTML = data.files.map(f => {
+        const label = typeLabel[f.mimeType] || 'File';
+        const modified = new Date(f.modifiedTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return `
+          <div class="google-item" onclick="window.open('${f.webViewLink}','_blank')">
+            <span class="google-item-icon">📄</span>
+            <div class="google-item-body">
+              <div class="google-item-title">${f.name}</div>
+              <div class="google-item-sub">${label}</div>
+            </div>
+            <span class="google-item-time">${modified}</span>
+          </div>
+        `;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<div class="empty">Could not load — make sure Google is connected</div>';
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // ZENITH
+  // ═══════════════════════════════════════
+  function addZenithItem() {
+    const title = document.getElementById('zenith-title-input').value.trim();
+    const link = document.getElementById('zenith-link-input').value.trim();
+    if (!title) return;
+    state.zenith.push({ id: Date.now(), title, link, done: false });
+    document.getElementById('zenith-title-input').value = '';
+    document.getElementById('zenith-link-input').value = '';
+    saveState(); renderZenith();
+  }
+
+  function toggleZenith(id) {
+    const item = state.zenith.find(z => z.id === id);
+    if (item) item.done = !item.done;
+    saveState(); renderZenith();
+  }
+
+  function deleteZenith(id) {
+    state.zenith = state.zenith.filter(z => z.id !== id);
+    saveState(); renderZenith();
+  }
+
+  function renderZenith() {
+    const list = document.getElementById('zenith-list');
+    if (!state.zenith.length) { list.innerHTML = '<div class="empty">No action items yet</div>'; return; }
+    const active = state.zenith.filter(i => !i.done);
+    const done = state.zenith.filter(i => i.done);
+    list.innerHTML = `
+      ${active.map(item => renderZenithItem(item)).join('')}
+      ${done.length ? `
+        <details style="margin-top:0.75rem">
+          <summary style="cursor:pointer; font-size:0.8rem; color:var(--muted); padding:0.4rem 0; list-style:none; display:flex; align-items:center; gap:0.5rem;">
+            <span>▶</span> Done (${done.length})
+          </summary>
+          <div style="margin-top:0.5rem">
+            ${done.map(item => renderZenithItem(item)).join('')}
+          </div>
+        </details>
+      ` : ''}
+    `;
+  }
+
+  function editZenith(id) {
+    const item = state.zenith.find(z => z.id === id);
+    if (!item) return;
+    const newTitle = prompt('Edit action item:', item.title);
+    if (newTitle !== null && newTitle.trim()) {
+      item.title = newTitle.trim();
+      saveState(); renderZenith();
+    }
+  }
+
+  function renderZenithItem(item) {
+    return `
+      <div class="action-item">
+        <div class="todo-check ${item.done ? 'checked' : ''}" onclick="toggleZenith(${item.id})"></div>
+        <div class="action-body">
+          <div class="action-title ${item.done ? 'todo-text done' : ''}">${item.title}</div>
+          ${item.link ? `<a class="action-link" href="${item.link}" target="_blank">Open link →</a>` : ''}
+        </div>
+        <button class="btn-edit" onclick="editZenith(${item.id})">edit</button>
+        <button class="btn btn-danger" onclick="deleteZenith(${item.id})">Remove</button>
+      </div>
+    `;
+  }
+
+  // ═══════════════════════════════════════
+  // MATH TO-DO
+  // ═══════════════════════════════════════
+  function addMathTodo() {
+    const text = document.getElementById('math-todo-input').value.trim();
+    if (!text) return;
+    state.mathTodos.push({ id: Date.now(), text, done: false });
+    document.getElementById('math-todo-input').value = '';
+    saveState(); renderMathTodos();
+  }
+
+  function toggleMathTodo(id) {
+    const item = state.mathTodos.find(t => t.id === id);
+    if (item) item.done = !item.done;
+    saveState(); renderMathTodos();
+  }
+
+  function deleteMathTodo(id) {
+    state.mathTodos = state.mathTodos.filter(t => t.id !== id);
+    saveState(); renderMathTodos();
+  }
+
+  function editMathTodo(id) {
+    const item = state.mathTodos.find(t => t.id === id);
+    if (!item) return;
+    const newText = prompt('Edit task:', item.text);
+    if (newText !== null && newText.trim()) {
+      item.text = newText.trim();
+      saveState(); renderMathTodos();
+    }
+  }
+
+  function renderMathTodos() {
+    const list = document.getElementById('math-todo-list');
+    if (!state.mathTodos.length) { list.innerHTML = '<div class="empty">No tasks yet</div>'; return; }
+    const active = state.mathTodos.filter(i => !i.done);
+    const done = state.mathTodos.filter(i => i.done);
+    const renderTodoItem = (item) => `
+      <div class="todo-item">
+        <div class="todo-check ${item.done ? 'checked' : ''}" onclick="toggleMathTodo(${item.id})"></div>
+        <span class="todo-text ${item.done ? 'done' : ''}">${item.text}</span>
+        <button class="btn-edit" onclick="editMathTodo(${item.id})">edit</button>
+        <button class="btn btn-danger" onclick="deleteMathTodo(${item.id})">×</button>
+      </div>
+    `;
+    list.innerHTML = `
+      ${active.map(renderTodoItem).join('')}
+      ${done.length ? `
+        <details style="margin-top:0.75rem">
+          <summary style="cursor:pointer; font-size:0.8rem; color:var(--muted); padding:0.4rem 0; list-style:none; display:flex; align-items:center; gap:0.5rem;">
+            <span>▶</span> Done (${done.length})
+          </summary>
+          <div style="margin-top:0.5rem">${done.map(renderTodoItem).join('')}</div>
+        </details>
+      ` : ''}
+    `;
+  }
+
+  // ═══════════════════════════════════════
+  // KANBAN
+  // ═══════════════════════════════════════
+  function addKanban(col) {
+    const input = document.getElementById('kanban-' + col + '-input');
+    const text = input.value.trim();
+    if (!text) return;
+    state.kanban[col].push({ id: Date.now(), text });
+    input.value = '';
+    saveState(); renderKanban();
+  }
+
+  function moveKanban(id, fromCol, toCol) {
+    const item = state.kanban[fromCol].find(k => k.id === id);
+    if (!item) return;
+    state.kanban[fromCol] = state.kanban[fromCol].filter(k => k.id !== id);
+    state.kanban[toCol].push(item);
+    saveState(); renderKanban();
+  }
+
+  function deleteKanban(id, col) {
+    state.kanban[col] = state.kanban[col].filter(k => k.id !== id);
+    saveState(); renderKanban();
+  }
+
+  function kanbanMoveButtons(id, col) {
+    const cols = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
+    return Object.keys(cols).filter(c => c !== col)
+      .map(c => `<button onclick="moveKanban(${id},'${col}','${c}')" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:2px 6px;font-size:0.72rem;cursor:pointer;margin-right:4px;font-family:'DM Sans',sans-serif" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">→ ${cols[c]}</button>`)
+      .join('');
+  }
+
+  function editKanban(id, col) {
+    const item = state.kanban[col].find(k => k.id === id);
+    if (!item) return;
+    const newText = prompt('Edit card:', item.text);
+    if (newText !== null && newText.trim()) {
+      item.text = newText.trim();
+      saveState(); renderKanban();
+    }
+  }
+
+  function renderKanban() {
+    ['todo', 'inprogress', 'done'].forEach(col => {
+      const el = document.getElementById('kanban-' + col);
+      if (!state.kanban[col].length) { el.innerHTML = '<div class="empty" style="padding:1rem 0">Empty</div>'; return; }
+      el.innerHTML = state.kanban[col].map(item => `
+        <div class="kanban-card">
+          <button class="delete-card" onclick="deleteKanban(${item.id},'${col}')">×</button>
+          <div style="margin-bottom:0.4rem">${item.text}</div>
+          <div style="display:flex; align-items:center; gap:0.3rem; flex-wrap:wrap;">
+            ${kanbanMoveButtons(item.id, col)}
+            <button class="btn-edit" style="opacity:0" onclick="editKanban(${item.id},'${col}')">edit</button>
+          </div>
+        </div>
+      `).join('');
+    });
+  }
+
+  // ═══════════════════════════════════════
+  // EXAMS
+  // ═══════════════════════════════════════
+  function addExam() {
+    const name = document.getElementById('exam-name').value.trim();
+    const subject = document.getElementById('exam-subject').value.trim();
+    const date = document.getElementById('exam-date').value;
+    if (!name || !date) return;
+    state.exams.push({ id: Date.now(), name, subject, date, prepLinks: [] });
+    document.getElementById('exam-name').value = '';
+    document.getElementById('exam-subject').value = '';
+    document.getElementById('exam-date').value = '';
+    saveState(); renderExams();
+  }
+
+  function addPrepLink(examId) {
+    const labelEl = document.getElementById('prep-label-' + examId);
+    const urlEl = document.getElementById('prep-url-' + examId);
+    const label = labelEl.value.trim();
+    const url = urlEl.value.trim();
+    if (!label || !url) return;
+    const exam = state.exams.find(e => e.id === examId);
+    if (!exam) return;
+    if (!exam.prepLinks) exam.prepLinks = [];
+    exam.prepLinks.push({ id: Date.now(), label, url: url.startsWith('http') ? url : 'https://' + url });
+    labelEl.value = ''; urlEl.value = '';
+    saveState(); renderExams();
+  }
+
+  function removePrepLink(examId, linkId) {
+    const exam = state.exams.find(e => e.id === examId);
+    if (!exam) return;
+    exam.prepLinks = (exam.prepLinks || []).filter(l => l.id !== linkId);
+    saveState(); renderExams();
+  }
+
+  function deleteExam(id) {
+    state.exams = state.exams.filter(e => e.id !== id);
+    saveState(); renderExams();
+  }
+
+  function daysUntil(dateStr) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    return Math.round((new Date(dateStr + 'T00:00:00') - today) / 86400000);
+  }
+
+  function renderExams() {
+    const list = document.getElementById('exam-list');
+    if (!state.exams.length) { list.innerHTML = '<div class="empty">No exams added yet</div>'; return; }
+    const sorted = [...state.exams].sort((a, b) => new Date(a.date) - new Date(b.date));
+    list.innerHTML = sorted.map(exam => {
+      const days = daysUntil(exam.date);
+      const cls = days <= 7 ? 'days-soon' : days <= 21 ? 'days-medium' : 'days-far';
+      const txt = days < 0 ? 'Past' : days === 0 ? 'Today!' : `${days}d`;
+      const display = new Date(exam.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const prepLinks = exam.prepLinks || [];
+      const prepChips = prepLinks.map(l => `
+        <span class="prep-link-chip">
+          <a href="${l.url}" target="_blank">${l.label}</a>
+          <button onclick="removePrepLink(${exam.id}, ${l.id})" title="Remove">×</button>
+        </span>
+      `).join('');
+      return `
+        <div class="exam-item" style="flex-direction:column; align-items:stretch; gap:0.5rem;">
+          <div style="display:flex; align-items:center; gap:1rem;">
+            <span class="exam-countdown ${cls}">${txt}</span>
+            <div class="exam-info" style="flex:1">
+              <div class="exam-name">${exam.name}</div>
+              ${exam.subject ? `<div class="exam-subject">${exam.subject}</div>` : ''}
+            </div>
+            <div class="exam-date">${display}</div>
+            <button class="btn btn-danger" onclick="deleteExam(${exam.id})">Remove</button>
+          </div>
+          <div class="prep-links-section">
+            <div style="font-size:0.75rem; color:var(--muted); margin-bottom:0.3rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">Prep Links</div>
+            <div>${prepChips || '<span style="font-size:0.78rem; color:var(--muted)">No prep links yet</span>'}</div>
+            <div class="prep-link-add-row">
+              <input class="kanban-input" id="prep-label-${exam.id}" placeholder="Link name..." style="flex:1; min-width:100px" onkeydown="if(event.key==='Enter') addPrepLink(${exam.id})" />
+              <input class="kanban-input" id="prep-url-${exam.id}" placeholder="https://..." style="flex:2; min-width:140px" onkeydown="if(event.key==='Enter') addPrepLink(${exam.id})" />
+              <button class="btn-small" onclick="addPrepLink(${exam.id})">+</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ═══════════════════════════════════════
+  // LINKS
+  // ═══════════════════════════════════════
+  const linkColors = { zenith: 'var(--accent)', math: 'var(--accent2)' };
+
+  function addLink(tab) {
+    const label = document.getElementById(tab + '-link-label').value.trim();
+    const url = document.getElementById(tab + '-link-url').value.trim();
+    if (!label || !url) return;
+    const fullUrl = url.startsWith('http') ? url : 'https://' + url;
+    state.links[tab].push({ id: Date.now(), label, url: fullUrl });
+    document.getElementById(tab + '-link-label').value = '';
+    document.getElementById(tab + '-link-url').value = '';
+    saveState(); renderLinks(tab);
+  }
+
+  function removeLink(tab, id) {
+    state.links[tab] = state.links[tab].filter(l => l.id !== id);
+    saveState(); renderLinks(tab);
+  }
+
+  function renderLinks(tab) {
+    const grid = document.getElementById(tab + '-links');
+    const color = linkColors[tab];
+    if (!state.links[tab].length) { grid.innerHTML = `<div class="empty" style="text-align:left;padding:0.5rem 0">No links yet — add one above</div>`; return; }
+    grid.innerHTML = state.links[tab].map(link => `
+      <a class="link-item" href="${link.url}" target="_blank">
+        <span class="link-dot" style="background:${color}"></span>
+        ${link.label}
+        <button class="link-remove-btn" onclick="event.preventDefault(); removeLink('${tab}', ${link.id})">×</button>
+      </a>
+    `).join('');
+  }
+  // ═══════════════════════════════════════
+  // ZENITH DOC INTEGRATION
+  // ═══════════════════════════════════════
+  let zenithMeetings = [];
+
+  // Fetches all meetings and their action items from the server,
+  // then populates the meeting dropdown and loads the latest one
+  async function fetchZenithDoc() {
+    const listEl = document.getElementById('zenith-doc-list');
+    const selectEl = document.getElementById('meeting-select');
+    listEl.innerHTML = '<div class="loading">Pulling from Google Doc...</div>';
+
+    try {
+      const res = await fetch(`${SERVER}/api/zenith`);
+      const data = await res.json();
+
+      if (data.error) {
+        listEl.innerHTML = `<div class="empty">Error: ${data.error}</div>`;
+        return;
+      }
+
+      zenithMeetings = data.meetings;
+
+      // Populate the dropdown with meeting titles
+      selectEl.innerHTML = zenithMeetings.map((m, i) =>
+        `<option value="${i}">${m.title}</option>`
+      ).join('');
+
+      // Load the most recent meeting (index 0) by default
+      loadMeetingItems();
+
+    } catch(e) {
+      listEl.innerHTML = '<div class="empty">Could not reach server</div>';
+    }
+  }
+
+  // Renders the action items for whichever meeting is selected
+  function loadMeetingItems() {
+    const selectEl = document.getElementById('meeting-select');
+    const listEl = document.getElementById('zenith-doc-list');
+    const idx = parseInt(selectEl.value) || 0;
+    const meeting = zenithMeetings[idx];
+
+    if (!meeting) { listEl.innerHTML = '<div class="empty">No items found</div>'; return; }
+
+    // Load completion state from saved data
+    // We store completions as a set of item IDs in state.zenithDocCompletions
+    if (!state.zenithDocCompletions) state.zenithDocCompletions = {};
+
+    const active = meeting.actionItems.filter(item => !state.zenithDocCompletions[item.id]);
+    const done = meeting.actionItems.filter(item => !!state.zenithDocCompletions[item.id]);
+
+    const renderDocItem = (item) => {
+      const isDone = !!state.zenithDocCompletions[item.id];
+      const linkButtons = item.links.map(l =>
+        `<a class="action-link" href="${l.url}" target="_blank">${l.text} →</a>`
+      ).join(' ');
+      return `
+        <div class="action-item">
+          <div class="todo-check ${isDone ? 'checked' : ''}" onclick="toggleDocItem('${item.id}', this)"></div>
+          <div class="action-body">
+            <div class="action-title ${isDone ? 'todo-text done' : ''}">${item.text}</div>
+            ${linkButtons ? `<div style="margin-top:0.25rem; display:flex; flex-wrap:wrap; gap:0.5rem">${linkButtons}</div>` : ''}
+          </div>
+        </div>
+      `;
+    };
+
+    listEl.innerHTML = `
+      ${active.map(renderDocItem).join('')}
+      ${done.length ? `
+        <details style="margin-top:0.75rem">
+          <summary style="cursor:pointer; font-size:0.8rem; color:var(--muted); padding:0.4rem 0; list-style:none; display:flex; align-items:center; gap:0.5rem;">
+            <span>▶</span> Done (${done.length})
+          </summary>
+          <div style="margin-top:0.5rem">
+            ${done.map(renderDocItem).join('')}
+          </div>
+        </details>
+      ` : ''}
+    `;
+  }
+
+  // Toggles a doc action item's completion state
+  function toggleDocItem(id, el) {
+    if (!state.zenithDocCompletions) state.zenithDocCompletions = {};
+    state.zenithDocCompletions[id] = !state.zenithDocCompletions[id];
+    const done = state.zenithDocCompletions[id];
+
+    const item = el.closest('.action-item');
+    item.querySelector('.todo-check').classList.toggle('checked', done);
+    item.querySelector('.action-title').classList.toggle('done', done);
+
+    saveState();
+  }
+  // ═══════════════════════════════════════
+  // STAR FIELD
+  // Creates individual star elements so each
+  // one can flicker at its own random speed
+  // and delay, all out of sync with each other.
+  // ═══════════════════════════════════════
+  // ═══════════════════════════════════════
+  // AI CHAT
+  // ═══════════════════════════════════════
+  let chatOpen    = false;
+  let chatHistory = [];  // [{role:"user"|"model", text:"..."}]
+  let chatBusy    = false;
+
+  function toggleChat() {
+    chatOpen = !chatOpen;
+    document.getElementById('chat-panel').classList.toggle('open', chatOpen);
+    if (chatOpen) document.getElementById('chat-input').focus();
+  }
+
+  async function sendChat() {
+    if (chatBusy) return;
+    const input = document.getElementById('chat-input');
+    const msg   = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    chatBusy = true;
+    document.getElementById('chat-send').disabled = true;
+
+    // Show user bubble
+    appendChatMsg('user', msg);
+
+    // Show thinking indicator
+    const thinkEl = appendChatMsg('ai', '...thinking', true);
+
+    try {
+      const res = await fetch(`${SERVER}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, history: chatHistory })
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        thinkEl.textContent = `Error: ${data.error}`;
+        thinkEl.classList.remove('thinking');
+      } else {
+        // Replace thinking bubble with real response
+        thinkEl.classList.remove('thinking');
+        thinkEl.textContent = data.response;
+
+        // Show action chips if items were added
+        if (data.actions && data.actions.length) {
+          data.actions.forEach(a => {
+            const chip = document.createElement('div');
+            chip.className = 'chat-action-chip';
+            const verb = a.startsWith('DONE_') ? '✓ Checked off: ' : a.startsWith('REMOVE_') ? '✕ Removed: ' : a.startsWith('EDIT_') ? '✎ Edited: ' : a.startsWith('MOVE_') ? '↕ Moved: ' : '✓ Added: ';
+            chip.textContent = verb + formatAction(a);
+            thinkEl.after(chip);
+          });
+          // Reload dashboard data so changes appear immediately.
+          // Also re-fetch the Zenith doc so done/undone states update in the panel.
+          loadStateFromServer().then(() => { renderAll(); fetchZenithDoc(); });
+        }
+
+        // Save to history for multi-turn conversation
+        chatHistory.push({ role: 'user',  text: msg });
+        chatHistory.push({ role: 'model', text: data.response });
+
+        // Keep history from growing too large (last 10 exchanges)
+        if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+      }
+    } catch(e) {
+      thinkEl.textContent = 'Could not reach server. Make sure python server.py is running.';
+      thinkEl.classList.remove('thinking');
+    }
+
+    chatBusy = false;
+    document.getElementById('chat-send').disabled = false;
+    input.focus();
+  }
+
+  function appendChatMsg(role, text, thinking = false) {
+    const el = document.createElement('div');
+    el.className = `chat-msg ${role}${thinking ? ' thinking' : ''}`;
+    el.textContent = text;
+    const box = document.getElementById('chat-messages');
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+    return el;
+  }
+
+  function formatAction(action) {
+    // Turn "ADD_MATH_TODO:finish chapter 5" into "Math Todo: finish chapter 5"
+    const map = {
+      'ADD_ZENITH':           'Zenith item',
+      'ADD_MATH_TODO':        'Math to-do',
+      'ADD_KANBAN_TODO':      'Coding project',
+      'ADD_KANBAN_INPROGRESS':'Coding project (in progress)',
+      'ADD_EXAM':             'Exam',
+    };
+    const [key, ...rest] = action.split(':');
+    const label = map[key] || key;
+    const value = rest.join(':').split('|')[0]; // just the name for exams
+    return `${label}: ${value}`;
+  }
+
+  // ═══════════════════════════════════════
+  // CANVAS STAR FIELD
+  // One <canvas> element replaces thousands
+  // of divs. Canvas is GPU-accelerated and
+  // handles hundreds of animated stars with
+  // almost no CPU cost.
+  // ═══════════════════════════════════════
+  (function initStarCanvas() {
+    const canvas = document.getElementById('star-canvas');
+    const ctx    = canvas.getContext('2d');
+
+    // Match canvas pixels to the actual screen size
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Build star data grouped by RGB color — color-batching optimization.
+    // By pre-bucketing into 3 color groups we only call ctx.fillStyle 3× per frame
+    // instead of 2000×, which massively reduces GPU state-change overhead.
+    const buckets = [
+      { rgb: '180,155,255', stars: [] },   // purple-tinted  (~15 %)
+      { rgb: '140,175,255', stars: [] },   // blue-tinted    (~13 %)
+      { rgb: '255,255,255', stars: [] },   // white          (~72 %)
+    ];
+    for (let i = 0; i < 2000; i++) {
+      const rnd = Math.random();
+      const bucket = rnd < 0.15 ? buckets[0] : rnd < 0.28 ? buckets[1] : buckets[2];
+      bucket.stars.push({
+        x:     Math.random(),
+        y:     Math.random(),
+        r:     Math.random() < 0.75 ? 0.7 : 1.4,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.0003 + Math.random() * 0.0008,
+      });
+    }
+
+    // Draw all stars each frame. For each color bucket we set fillStyle ONCE,
+    // then iterate all stars in that bucket changing only globalAlpha (cheap).
+    function draw(time) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const W = canvas.width, H = canvas.height;
+
+      for (const { rgb, stars } of buckets) {
+        ctx.fillStyle = `rgb(${rgb})`;
+        for (const s of stars) {
+          ctx.globalAlpha = 0.12 + 0.88 * (0.5 + 0.5 * Math.sin(time * s.speed + s.phase));
+          ctx.beginPath();
+          ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      requestAnimationFrame(draw);
+    }
+
+    requestAnimationFrame(draw);
+  })();
+
+  // ═══════════════════════════════════════
+  // GALAXIES
+  // Two distant galaxies made from layered
+  // blurred ellipses with a bright core.
+  // ═══════════════════════════════════════
+  (function createGalaxies() {
+    const container = document.getElementById('star-field');
+
+    const galaxies = [
+      // Galaxy 1 — upper-left, purple/violet tones
+      {
+        x: 18, y: 24,
+        mainW: 230, mainH: 88, mainRot: 28,
+        gradient: 'radial-gradient(ellipse at center, rgba(190,150,255,0.28) 0%, rgba(110,75,230,0.14) 35%, rgba(65,40,190,0.05) 68%, transparent 100%)',
+        armW: 110, armH: 130, armRot: 28 + 88,
+        coreGlow: '0 0 10px 4px rgba(210,180,255,0.55)',
+        blur: 13, armBlur: 18, coreBlur: 1.5, delay: 0,
+      },
+      // Galaxy 2 — right side, blue/teal tones
+      {
+        x: 80, y: 62,
+        mainW: 170, mainH: 62, mainRot: -20,
+        gradient: 'radial-gradient(ellipse at center, rgba(145,195,255,0.22) 0%, rgba(70,145,225,0.12) 38%, rgba(40,110,180,0.04) 68%, transparent 100%)',
+        armW: 85, armH: 100, armRot: -20 + 88,
+        coreGlow: '0 0 7px 3px rgba(170,210,255,0.45)',
+        blur: 10, armBlur: 15, coreBlur: 1.5, delay: 3,
+      },
+    ];
+
+    galaxies.forEach(g => {
+      // Main halo — the wide flat disc of the galaxy
+      const halo = document.createElement('div');
+      halo.className = 'galaxy';
+      halo.style.cssText = `
+        left:${g.x}%; top:${g.y}%;
+        width:${g.mainW}px; height:${g.mainH}px;
+        transform:translate(-50%,-50%) rotate(${g.mainRot}deg);
+        background:${g.gradient};
+        filter:blur(${g.blur}px);
+        animation-delay:-${g.delay}s;
+      `;
+      container.appendChild(halo);
+
+      // Second arm — rotated ~90° from the main disc, adds depth
+      const arm = document.createElement('div');
+      arm.className = 'galaxy';
+      arm.style.cssText = `
+        left:${g.x}%; top:${g.y}%;
+        width:${g.armW}px; height:${g.armH}px;
+        transform:translate(-50%,-50%) rotate(${g.armRot}deg);
+        background:${g.gradient};
+        filter:blur(${g.armBlur}px);
+        animation-delay:-${g.delay + 2}s;
+      `;
+      container.appendChild(arm);
+
+      // Bright core — tiny glowing dot at the centre
+      const core = document.createElement('div');
+      core.style.cssText = `
+        position:absolute;
+        left:${g.x}%; top:${g.y}%;
+        width:3px; height:3px;
+        transform:translate(-50%,-50%);
+        background:rgba(255,255,255,0.9);
+        border-radius:50%;
+        filter:blur(${g.coreBlur}px);
+        box-shadow:${g.coreGlow};
+        pointer-events:none;
+        opacity:0.85;
+      `;
+      container.appendChild(core);
+    });
+  })();
+
+  // ═══════════════════════════════════════
+  // SHOOTING STARS
+  // Fires one every 3–7 seconds at a random
+  // position. Each has its own speed so
+  // they feel natural and unpredictable.
+  // ═══════════════════════════════════════
+  function launchShootingStar() {
+    const container = document.getElementById('star-field');
+    const star = document.createElement('div');
+    star.className = 'shooting-star';
+
+    // Start anywhere in the upper half of the screen
+    const x = 5 + Math.random() * 75;   // % across
+    const y = 2 + Math.random() * 48;   // % down
+
+    // Random length (60–170px) and speed (0.45–0.9s)
+    const length = 60  + Math.random() * 110;
+    const dur    = (0.45 + Math.random() * 0.45).toFixed(2);
+
+    star.style.cssText = `
+      left:${x}%;
+      top:${y}%;
+      width:${length}px;
+      --d:${dur}s;
+    `;
+
+    container.appendChild(star);
+
+    // Clean up after the animation finishes
+    setTimeout(() => star.remove(), parseFloat(dur) * 1000 + 150);
+
+    // Fire the next one after a random gap (3–7 seconds)
+    setTimeout(launchShootingStar, 3000 + Math.random() * 4000);
+  }
+
+  // First shooting star appears 1.5–3.5 seconds after page load
+  setTimeout(launchShootingStar, 1500 + Math.random() * 2000);
+
+  // ═══════════════════════════════════════
+  // RENDER ALL
+  // ═══════════════════════════════════════
+  // ═══════════════════════════════════════
+  // TIMESHEET
+  // ═══════════════════════════════════════
+  let _timesheetLoaded = false;
+
+  function formatTimeDisplay(val) {
+    if (!val) return '';
+    // If already H:MM format, display as-is
+    if (/^\d+:\d{2}$/.test(String(val).trim())) return String(val).trim();
+    // Strip any old h/m suffix before re-formatting
+    const n = parseFloat(String(val).replace(/[hm]$/i, '').trim());
+    if (isNaN(n)) return String(val);
+    if (n >= 1 && n <= 9) return n + ':00';
+    if (n >= 10 && n <= 59) return '0:' + String(n).padStart(2, '0');
+    return String(val);
+  }
+
+  function formatDateShort(dateStr) {
+    try {
+      const parts = dateStr.split('/');
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${months[parseInt(parts[0])-1]} ${parseInt(parts[1])}`;
+    } catch { return dateStr; }
+  }
+
+  async function loadTimesheet() {
+    const container = document.getElementById('timesheet-container');
+    container.innerHTML = '<div class="loading">Loading timesheet...</div>';
+    try {
+      const res = await fetch(`${SERVER}/api/timesheet`);
+      const data = await res.json();
+      if (data.error) { container.innerHTML = `<div class="empty">Error: ${data.error}</div>`; return; }
+      renderTimesheet(data);
+      updateAddMonthBtn(data.months);
+      _timesheetLoaded = true;
+    } catch(e) {
+      container.innerHTML = '<div class="empty">Could not load timesheet — make sure Google is connected.</div>';
+    }
+  }
+
+  function renderTimesheet(data) {
+    const container = document.getElementById('timesheet-container');
+    if (!data.months || !data.months.length) {
+      container.innerHTML = '<div class="empty">No timesheet data found.</div>';
+      return;
+    }
+    let html = '';
+    data.months.forEach((month, mi) => {
+      const isOpen = mi === 0 ? 'open' : '';
+      const isEmpty = month.rows.every(r => r.cells.every(c => !c.value));
+      const deleteBtn = isEmpty
+        ? `<button onclick="event.preventDefault();deleteTimesheetMonth('${month.key}','${month.label}')" style="margin-left:auto;background:rgba(247,106,106,0.12);color:var(--accent4);border:1px solid rgba(247,106,106,0.3);border-radius:0.3rem;padding:0.15rem 0.6rem;font-size:0.73rem;cursor:pointer">Delete</button>`
+        : '';
+      html += `<details class="timesheet-month card" ${isOpen}>
+        <summary><span class="ts-arrow">▶</span>${month.label} <span style="color:var(--muted);font-size:0.78rem;font-weight:400;margin-left:0.4rem">${month.dates.length} days</span>${deleteBtn}</summary>
+        <div class="timesheet-table-wrap">
+          <table class="timesheet-table">
+            <thead><tr>
+              <th class="ts-act-header">Activity</th>
+              ${month.dates.map(d => `<th>${formatDateShort(d)}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${month.rows.map(row => `
+                <tr>
+                  <td class="ts-act-cell">${row.activity}</td>
+                  ${row.cells.map(cell => `
+                    <td><span
+                      class="ts-cell"
+                      contenteditable="true"
+                      data-row="${cell.sheet_row}"
+                      data-col="${cell.sheet_col}"
+                      data-sheet="${data.sheet_name}"
+                      data-original="${cell.value}"
+                      onblur="onTsCellBlur(this)"
+                      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();return false}"
+                    >${formatTimeDisplay(cell.value)}</span></td>
+                  `).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </details>`;
+    });
+    container.innerHTML = html;
+  }
+
+  async function onTsCellBlur(el) {
+    const raw = el.textContent.trim();
+    // Strip h/m suffix only for bare numbers; leave H:MM format alone
+    const numeric = /^\d+:\d{2}$/.test(raw) ? raw : raw.replace(/[hm]$/i, '').trim();
+    const original = el.dataset.original || '';
+
+    const formatted = formatTimeDisplay(numeric);
+    if (el.textContent.trim() !== formatted) el.textContent = formatted;
+    if (numeric === original) return;
+
+    const sheetRow = parseInt(el.dataset.row);
+    const sheetCol = parseInt(el.dataset.col);
+    const sheetName = el.dataset.sheet;
+
+    el.classList.add('saving');
+    try {
+      const res = await fetch(`${SERVER}/api/timesheet/update`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ row: sheetRow, col: sheetCol, value: numeric, sheet_name: sheetName }),
+      });
+      const json = await res.json();
+      if (json.success) el.dataset.original = numeric;
+    } catch(e) { console.error('Timesheet update failed', e); }
+    el.classList.remove('saving');
+  }
+
+  let _nextMonth = null; // {year, month, label} — set after timesheet loads
+
+  function updateAddMonthBtn(months) {
+    if (!months || !months.length) return;
+    // Most recent month is first; compute the one after it
+    const [y, m] = months[0].key.split('-').map(Number);
+    let ny = y, nm = m + 1;
+    if (nm > 12) { nm = 1; ny++; }
+    const labels = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    _nextMonth = { year: ny, month: nm };
+    const btn = document.getElementById('ts-add-btn');
+    if (btn) btn.textContent = `Add ${labels[nm-1]} ${ny}`;
+  }
+
+  async function addTimesheetMonth() {
+    const status = document.getElementById('ts-add-status');
+    if (!_nextMonth) { status.textContent = 'Load timesheet first.'; return; }
+    status.textContent = 'Adding…';
+    try {
+      const res = await fetch(`${SERVER}/api/timesheet/add-month`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(_nextMonth),
+      });
+      const json = await res.json();
+      if (json.error) { status.textContent = 'Error: ' + json.error; return; }
+      status.textContent = `✓ Added ${json.days_added} days`;
+      setTimeout(() => { status.textContent = ''; }, 3000);
+      loadTimesheet();
+    } catch(e) {
+      status.textContent = 'Failed to add month.';
+    }
+  }
+
+  async function deleteTimesheetMonth(monthKey, label) {
+    if (!confirm(`Delete all ${label} columns from the sheet? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`${SERVER}/api/timesheet/delete-month`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ month_key: monthKey }),
+      });
+      const json = await res.json();
+      if (json.error) { alert('Error: ' + json.error); return; }
+      loadTimesheet();
+    } catch(e) { alert('Failed to delete month.'); }
+  }
+
+  function renderAll() {
+    renderZenith(); renderMathTodos(); renderKanban(); renderExams();
+    renderLinks('zenith'); renderLinks('math');
+  }
+  </script>
+  </body>
+  </html>

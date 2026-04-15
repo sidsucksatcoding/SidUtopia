@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sid's Utopia — Theme Picker</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #0a0a0f;
+      color: white;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 1.4rem;
+      color: #aaa;
+      margin-bottom: 0.4rem;
+    }
+    .subtitle { text-align: center; color: #555; font-size: 0.9rem; margin-bottom: 2.5rem; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .theme-card {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #222;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .theme-card:hover { transform: translateY(-4px); border-color: #555; }
+
+    .preview {
+      height: 220px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: 1.2rem;
+      gap: 0.6rem;
+      overflow: hidden;
+    }
+
+    .mock-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 600;
+      position: relative;
+      z-index: 2;
+    }
+    .mock-tabs {
+      display: flex;
+      gap: 0.5rem;
+      position: relative;
+      z-index: 2;
+    }
+    .mock-tab {
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .mock-cards {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: auto;
+      position: relative;
+      z-index: 2;
+    }
+    .mock-card {
+      flex: 1;
+      height: 60px;
+      border-radius: 8px;
+      padding: 0.5rem 0.7rem;
+      font-size: 0.72rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .mock-line {
+      height: 7px;
+      border-radius: 4px;
+      width: 80%;
+    }
+    .mock-line.short { width: 50%; }
+
+    .info {
+      padding: 1rem 1.2rem;
+      background: #111;
+    }
+    .theme-name { font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; }
+    .theme-desc { font-size: 0.82rem; color: #777; margin-bottom: 0.75rem; }
+    .palette { display: flex; gap: 0.4rem; }
+    .swatch {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.08);
+    }
+
+    /* ── OPTION 1: COSMIC PURPLE ── */
+    .t1 .preview {
+      background: #0d0b1a;
+    }
+    .t1 .blob1 {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 80% 20%, rgba(100,60,220,0.35) 0%, transparent 60%),
+                  radial-gradient(ellipse at 10% 80%, rgba(30,100,200,0.2) 0%, transparent 50%);
+    }
+    .t1 .stars {
+      position: absolute; inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.7) 1px, transparent 1px),
+        radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px);
+      background-size: 80px 80px, 50px 50px;
+      background-position: 0 0, 30px 30px;
+      opacity: 0.3;
+    }
+    .t1 .mock-title { color: #b09fff; }
+    .t1 .mock-tab { background: rgba(124,106,247,0.2); color: #b09fff; }
+    .t1 .mock-tab.active { background: #7c6af7; color: white; }
+    .t1 .mock-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(124,106,247,0.2); }
+    .t1 .mock-line { background: rgba(124,106,247,0.5); }
+    .t1 .mock-line.short { background: rgba(78,205,196,0.4); }
+
+    /* ── OPTION 2: NEON GRID ── */
+    .t2 .preview {
+      background: #000;
+    }
+    .t2 .grid-bg {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,200,0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,200,0.07) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+    .t2 .glow {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 100%, rgba(255,0,200,0.15) 0%, transparent 60%);
+    }
+    .t2 .mock-title { color: #0ff; text-shadow: 0 0 10px rgba(0,255,255,0.6); }
+    .t2 .mock-tab { background: rgba(0,255,200,0.08); color: #0ffb; border: 1px solid rgba(0,255,200,0.2); }
+    .t2 .mock-tab.active { background: rgba(255,0,200,0.2); color: #ff00cc; border-color: #ff00cc; }
+    .t2 .mock-card { background: rgba(0,0,0,0.6); border: 1px solid rgba(0,255,200,0.2); }
+    .t2 .mock-line { background: rgba(0,255,200,0.5); }
+    .t2 .mock-line.short { background: rgba(255,0,200,0.5); }
+
+    /* ── OPTION 3: FROSTED GLASS ── */
+    .t3 .preview {
+      background: #0a0e2a;
+    }
+    .t3 .blob1 {
+      position: absolute;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(100, 60, 255, 0.4);
+      filter: blur(60px);
+      top: -40px; right: -20px;
+    }
+    .t3 .blob2 {
+      position: absolute;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(0, 200, 255, 0.3);
+      filter: blur(50px);
+      bottom: -30px; left: 20px;
+    }
+    .t3 .mock-title { color: #e0d8ff; }
+    .t3 .mock-tab {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .t3 .mock-tab.active {
+      background: rgba(255,255,255,0.18);
+      color: white;
+      border-color: rgba(255,255,255,0.3);
+    }
+    .t3 .mock-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+    }
+    .t3 .mock-line { background: rgba(180,160,255,0.5); }
+    .t3 .mock-line.short { background: rgba(0,200,255,0.4); }
+
+    /* ── OPTION 4: AURORA ── */
+    .t4 .preview {
+      background: #060d12;
+    }
+    .t4 .aurora {
+      position: absolute; top: 0; left: 0; right: 0; height: 120px;
+      background: linear-gradient(180deg,
+        rgba(0,200,120,0.25) 0%,
+        rgba(80,60,200,0.2) 40%,
+        transparent 100%);
+      filter: blur(8px);
+    }
+    .t4 .aurora2 {
+      position: absolute; top: 10px; left: 0; right: 0; height: 80px;
+      background: linear-gradient(180deg,
+        rgba(0,230,200,0.15) 0%,
+        transparent 100%);
+      filter: blur(12px);
+    }
+    .t4 .mock-title { color: #7fffcf; }
+    .t4 .mock-tab { background: rgba(0,200,120,0.1); color: rgba(127,255,207,0.8); }
+    .t4 .mock-tab.active { background: rgba(0,200,120,0.25); color: #7fffcf; }
+    .t4 .mock-card { background: rgba(0,20,15,0.6); border: 1px solid rgba(0,200,120,0.15); }
+    .t4 .mock-line { background: rgba(0,200,120,0.45); }
+    .t4 .mock-line.short { background: rgba(80,60,200,0.45); }
+
+    /* ── OPTION 5: MINIMAL NOISE ── */
+    .t5 .preview {
+      background: #111114;
+    }
+    .t5 .noise {
+      position: absolute; inset: 0;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px;
+    }
+    .t5 .header-line {
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, #7c6af7, #4ecdc4, #f7c948, #f76a6a, #7c6af7);
+    }
+    .t5 .mock-title { color: #e8e8f0; }
+    .t5 .mock-tab { color: rgba(255,255,255,0.4); }
+    .t5 .mock-tab.active {
+      color: white;
+      border-bottom: 2px solid #7c6af7;
+    }
+    .t5 .mock-card { background: #18181c; border: 1px solid #2e2e38; }
+    .t5 .mock-line { background: #3a3a4a; }
+    .t5 .mock-line.short { background: #7c6af730; }
+  </style>
+</head>
+<body>
+
+<h1>Sid's Utopia — Theme Picker</h1>
+<p class="subtitle">Click a theme to copy its name. Hover to see it lift.</p>
+
+<div class="grid">
+
+  <!-- OPTION 1 -->
+  <div class="theme-card t1" onclick="pick('Cosmic Purple')">
+    <div class="preview">
+      <div class="blob1"></div>
+      <div class="stars"></div>
+      <div class="mock-title">Sid's Utopia/</div>
+      <div class="mock-tabs">
+        <span class="mock-tab active">Zenith</span>
+        <span class="mock-tab">Math</span>
+        <span class="mock-tab">Coding</span>
+        <span class="mock-tab">Exams</span>
+      </div>
+      <div class="mock-cards">
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+      </div>
+    </div>
+    <div class="info">
+      <div class="theme-name">1 — Cosmic Purple</div>
+      <div class="theme-desc">Space nebula with purple/blue blobs and subtle stars. Current vibe, upgraded.</div>
+      <div class="palette">
+        <div class="swatch" style="background:#0d0b1a"></div>
+        <div class="swatch" style="background:#7c6af7"></div>
+        <div class="swatch" style="background:#4ecdc4"></div>
+        <div class="swatch" style="background:#b09fff"></div>
+        <div class="swatch" style="background:#3c2fa0"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION 2 -->
+  <div class="theme-card t2" onclick="pick('Neon Grid')">
+    <div class="preview">
+      <div class="grid-bg"></div>
+      <div class="glow"></div>
+      <div class="mock-title">Sid's Utopia/</div>
+      <div class="mock-tabs">
+        <span class="mock-tab active">Zenith</span>
+        <span class="mock-tab">Math</span>
+        <span class="mock-tab">Coding</span>
+        <span class="mock-tab">Exams</span>
+      </div>
+      <div class="mock-cards">
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+      </div>
+    </div>
+    <div class="info">
+      <div class="theme-name">2 — Neon Grid</div>
+      <div class="theme-desc">Black background with glowing cyan grid lines and neon pink accents. Cyberpunk.</div>
+      <div class="palette">
+        <div class="swatch" style="background:#000"></div>
+        <div class="swatch" style="background:#00ffcc"></div>
+        <div class="swatch" style="background:#ff00cc"></div>
+        <div class="swatch" style="background:#00e5ff"></div>
+        <div class="swatch" style="background:#1a1a1a"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION 3 -->
+  <div class="theme-card t3" onclick="pick('Frosted Glass')">
+    <div class="preview">
+      <div class="blob1"></div>
+      <div class="blob2"></div>
+      <div class="mock-title">Sid's Utopia/</div>
+      <div class="mock-tabs">
+        <span class="mock-tab active">Zenith</span>
+        <span class="mock-tab">Math</span>
+        <span class="mock-tab">Coding</span>
+        <span class="mock-tab">Exams</span>
+      </div>
+      <div class="mock-cards">
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+      </div>
+    </div>
+    <div class="info">
+      <div class="theme-name">3 — Frosted Glass</div>
+      <div class="theme-desc">Deep navy with blurred color blobs behind glass-like transparent cards. macOS feel.</div>
+      <div class="palette">
+        <div class="swatch" style="background:#0a0e2a"></div>
+        <div class="swatch" style="background:#6433ff"></div>
+        <div class="swatch" style="background:#00c8ff"></div>
+        <div class="swatch" style="background:rgba(255,255,255,0.12); border-color:#555"></div>
+        <div class="swatch" style="background:#e0d8ff"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION 4 -->
+  <div class="theme-card t4" onclick="pick('Aurora')">
+    <div class="preview">
+      <div class="aurora"></div>
+      <div class="aurora2"></div>
+      <div class="mock-title">Sid's Utopia/</div>
+      <div class="mock-tabs">
+        <span class="mock-tab active">Zenith</span>
+        <span class="mock-tab">Math</span>
+        <span class="mock-tab">Coding</span>
+        <span class="mock-tab">Exams</span>
+      </div>
+      <div class="mock-cards">
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+      </div>
+    </div>
+    <div class="info">
+      <div class="theme-name">4 — Aurora</div>
+      <div class="theme-desc">Very dark base with flowing green/teal northern lights across the top. Calm + colorful.</div>
+      <div class="palette">
+        <div class="swatch" style="background:#060d12"></div>
+        <div class="swatch" style="background:#00c878"></div>
+        <div class="swatch" style="background:#00e6c8"></div>
+        <div class="swatch" style="background:#503cc8"></div>
+        <div class="swatch" style="background:#7fffcf"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION 5 -->
+  <div class="theme-card t5" onclick="pick('Minimal Noise')">
+    <div class="preview">
+      <div class="noise"></div>
+      <div class="header-line"></div>
+      <div class="mock-title">Sid's Utopia/</div>
+      <div class="mock-tabs">
+        <span class="mock-tab active">Zenith</span>
+        <span class="mock-tab">Math</span>
+        <span class="mock-tab">Coding</span>
+        <span class="mock-tab">Exams</span>
+      </div>
+      <div class="mock-cards">
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+        </div>
+      </div>
+    </div>
+    <div class="info">
+      <div class="theme-name">5 — Minimal Noise</div>
+      <div class="theme-desc">Clean dark base with subtle grain texture and a rainbow gradient line under the header. Polished.</div>
+      <div class="palette">
+        <div class="swatch" style="background:#111114"></div>
+        <div class="swatch" style="background:#7c6af7"></div>
+        <div class="swatch" style="background:#4ecdc4"></div>
+        <div class="swatch" style="background:#f7c948"></div>
+        <div class="swatch" style="background:#2e2e38"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" style="display:none; position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); background:#333; color:white; padding:0.7rem 1.5rem; border-radius:8px; font-size:0.9rem;"></div>
+
+<script>
+  function pick(name) {
+    const toast = document.getElementById('toast');
+    toast.textContent = `You picked: ${name} — tell Claude!`;
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 3000);
+  }
+</script>
+
+</body>
+</html>
