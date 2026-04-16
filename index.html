@@ -474,7 +474,21 @@
       .kanban-card:hover .delete-card { opacity: 1; }
       .delete-card:hover { color: var(--accent4) !important; }
 
-      .kanban-add-row { display: flex; gap: 0.5rem; margin-top: 0.9rem; }
+      .kanban-add-row { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.9rem; }
+      .kanban-add-row-inner { display: flex; gap: 0.5rem; }
+      .kanban-repo-input {
+        background: var(--bg); border: 1px solid var(--border);
+        border-radius: 7px; padding: 0.42rem 0.75rem; color: var(--muted);
+        font-family: 'DM Mono', monospace; font-size: 0.78rem; outline: none; width: 100%;
+        transition: border-color 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s;
+      }
+      .kanban-repo-input:focus { border-color: var(--accent2); color: var(--text); }
+      .kanban-repo-input::placeholder { color: var(--border); }
+      .kanban-card-desc { font-size: 0.8rem; color: var(--muted); margin: 0.3rem 0 0.45rem; line-height: 1.45; }
+      .kanban-card-meta { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.45rem; }
+      .kanban-lang-chip { font-size: 0.72rem; background: rgba(124,106,247,0.15); color: var(--accent); border-radius: 4px; padding: 1px 7px; font-family: 'DM Mono', monospace; }
+      .kanban-gh-link { font-size: 0.75rem; color: var(--accent2); text-decoration: none; font-family: 'DM Mono', monospace; display: inline-flex; align-items: center; gap: 3px; }
+      .kanban-gh-link:hover { text-decoration: underline; }
 
       .kanban-input {
         flex: 1; background: var(--bg); border: 1px solid var(--border);
@@ -590,7 +604,7 @@
         header { padding: 1rem; }
         .content { padding: 1rem; }
       }
-      details[open] summary span { transform: rotate(90deg); display: inline-block; }
+      details[open] summary > span.ts-arrow { transform: rotate(90deg); }
 
       /* ── ANIMATIONS ── */
       @keyframes fadeInUp {
@@ -632,9 +646,10 @@
       .timesheet-month summary::-webkit-details-marker { display: none; }
       .ts-arrow { font-size: 0.7rem; color: var(--muted); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); display: inline-block; }
       .timesheet-month[open] .ts-arrow { transform: rotate(90deg); }
-      .timesheet-table-wrap { overflow-x: auto; margin-top: 0.6rem; padding-bottom: 0.5rem; }
-      .timesheet-month > div { animation: tsOpen 0.28s cubic-bezier(0.4,0,0.2,1); }
-      @keyframes tsOpen { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+      .timesheet-table-wrap { margin-top: 0.6rem; }
+      .timesheet-month > div { animation: tsOpen 0.42s cubic-bezier(0.22,1,0.36,1); }
+      @keyframes tsOpen  { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes tsClose { from { opacity:1; transform:translateY(0);     } to { opacity:0; transform:translateY(-8px); } }
       .timesheet-table { border-collapse: collapse; font-size: 0.95rem; min-width: 100%; }
       .timesheet-table th {
         padding: 0.5rem 0.75rem; text-align: center; color: var(--muted);
@@ -658,6 +673,17 @@
       .ts-cell:not(:empty) { color: var(--text); }
       .ts-cell:focus { outline: none; border-color: var(--accent3); background: rgba(255,255,255,0.07); color: var(--text); }
       .ts-cell.saving { opacity: 0.4; pointer-events: none; }
+      .ts-week-tabs { display: flex; gap: 0.35rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+      .ts-week-tab {
+        padding: 0.3rem 0.9rem; border-radius: 7px; border: 1px solid var(--border);
+        background: none; color: var(--muted); font-size: 0.82rem; cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        transition: background 0.2s cubic-bezier(0.4,0,0.2,1), border-color 0.2s, color 0.2s;
+      }
+      .ts-week-tab:hover { border-color: var(--accent); color: var(--accent); }
+      .ts-week-tab.active { background: rgba(124,106,247,0.15); border-color: var(--accent); color: var(--accent); }
+      .ts-week-pane { display: none; overflow-x: auto; padding-bottom: 0.5rem; }
+      .ts-week-pane.active { display: block; }
 
       /* ── LOGIN POLISH ── */
       #login-screen {
@@ -1026,33 +1052,76 @@
       <div class="tab-panel" id="tab-coding">
         <div class="section-header">
           <span class="section-title">Coding Projects</span>
-          <span class="section-badge" style="background:#f7c94822; color:var(--accent3)">Kanban</span>
+          <span class="section-badge" style="background:#f7c94822; color:var(--accent3)">GitHub + Kanban</span>
         </div>
+
+        <!-- Kanban -->
         <div class="kanban">
           <div class="kanban-col">
             <div class="kanban-col-header"><span class="kanban-dot" style="background:var(--muted)"></span>To Do</div>
             <div id="kanban-todo"></div>
             <div class="kanban-add-row">
-              <input class="kanban-input" id="kanban-todo-input" placeholder="New project..." onkeydown="if(event.key==='Enter') addKanban('todo')" />
-              <button class="btn-small" onclick="addKanban('todo')">+</button>
+              <div class="kanban-add-row-inner">
+                <input class="kanban-input" id="kanban-todo-input" placeholder="Project name..." onkeydown="if(event.key==='Enter') addKanban('todo')" />
+                <button class="btn-small" onclick="addKanban('todo')">+</button>
+              </div>
+              <input class="kanban-repo-input" id="kanban-todo-repo" placeholder="github.com/user/repo (optional)" />
             </div>
           </div>
           <div class="kanban-col">
             <div class="kanban-col-header"><span class="kanban-dot" style="background:var(--accent3)"></span>In Progress</div>
             <div id="kanban-inprogress"></div>
             <div class="kanban-add-row">
-              <input class="kanban-input" id="kanban-inprogress-input" placeholder="New project..." onkeydown="if(event.key==='Enter') addKanban('inprogress')" />
-              <button class="btn-small" onclick="addKanban('inprogress')">+</button>
+              <div class="kanban-add-row-inner">
+                <input class="kanban-input" id="kanban-inprogress-input" placeholder="Project name..." onkeydown="if(event.key==='Enter') addKanban('inprogress')" />
+                <button class="btn-small" onclick="addKanban('inprogress')">+</button>
+              </div>
+              <input class="kanban-repo-input" id="kanban-inprogress-repo" placeholder="github.com/user/repo (optional)" />
             </div>
           </div>
           <div class="kanban-col">
             <div class="kanban-col-header"><span class="kanban-dot" style="background:var(--accent2)"></span>Done</div>
             <div id="kanban-done"></div>
             <div class="kanban-add-row">
-              <input class="kanban-input" id="kanban-done-input" placeholder="New project..." onkeydown="if(event.key==='Enter') addKanban('done')" />
-              <button class="btn-small" onclick="addKanban('done')">+</button>
+              <div class="kanban-add-row-inner">
+                <input class="kanban-input" id="kanban-done-input" placeholder="Project name..." onkeydown="if(event.key==='Enter') addKanban('done')" />
+                <button class="btn-small" onclick="addKanban('done')">+</button>
+              </div>
+              <input class="kanban-repo-input" id="kanban-done-repo" placeholder="github.com/user/repo (optional)" />
             </div>
           </div>
+        </div>
+
+        <!-- Repos grid -->
+        <div class="card" style="margin-top:1.5rem; margin-bottom:1.1rem">
+          <div class="card-header-row" style="margin-bottom:0.85rem">
+            <span class="card-title" style="margin:0">Repositories</span>
+            <span id="gh-repo-count" style="font-size:0.78rem; color:var(--muted); margin-left:0.5rem"></span>
+          </div>
+          <div id="gh-repos"><div class="empty">Enter your GitHub username below</div></div>
+        </div>
+
+        <!-- Open Issues / PRs -->
+        <div class="card" style="margin-bottom:1.1rem">
+          <div class="card-header-row" style="margin-bottom:0.85rem">
+            <span class="card-title" style="margin:0">Open Issues & PRs</span>
+            <span style="font-size:0.75rem; color:var(--muted); margin-left:0.5rem">requires PAT</span>
+          </div>
+          <div id="gh-issues"><div class="empty">Enter a Personal Access Token to load issues &amp; PRs</div></div>
+        </div>
+
+        <!-- GitHub Settings -->
+        <div class="card" style="margin-bottom:1.1rem">
+          <div class="card-header-row" style="margin-bottom:0.85rem">
+            <span class="card-title" style="margin:0">GitHub</span>
+            <button class="refresh-btn" onclick="loadGitHub()">Refresh</button>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.9rem">
+            <input class="todo-input" id="gh-username" placeholder="GitHub username..." style="flex:1; min-width:160px; font-size:0.9rem" onkeydown="if(event.key==='Enter') loadGitHub()" />
+            <input class="todo-input" id="gh-pat" type="password" placeholder="Personal Access Token (optional, for issues/PRs)" style="flex:2; min-width:220px; font-size:0.9rem; font-family:'DM Mono',monospace" onkeydown="if(event.key==='Enter') loadGitHub()" />
+            <button class="btn btn-primary" onclick="loadGitHub()">Load</button>
+          </div>
+          <div id="gh-status" style="font-size:0.8rem; color:var(--muted); min-height:1em"></div>
         </div>
       </div>
 
@@ -1161,7 +1230,7 @@
   </div>
 
   <script>
-  const SERVER = 'http://localhost:3000';
+  const SERVER = window.location.port === '5500' ? 'http://localhost:3000' : '';
 
   // ═══════════════════════════════════════
   // STATE — now stored on the server so
@@ -1241,6 +1310,12 @@
     loadGoogleData();
     fetchZenithDoc();
     loadCalendarEvents();
+    // Restore saved GitHub credentials and auto-load if username is saved
+    const savedUser = localStorage.getItem('gh_username');
+    const savedPat  = localStorage.getItem('gh_pat');
+    if (savedUser) document.getElementById('gh-username').value = savedUser;
+    if (savedPat)  document.getElementById('gh-pat').value = savedPat;
+    if (savedUser) loadGitHub();
   }
 
   async function updateStatusIndicator() {
@@ -1286,6 +1361,7 @@
     // Lazy-load data when switching to relevant tabs
     if (name === 'exams') loadCalendarEvents();
     if (name === 'google') loadGoogleData();
+    if (name === 'coding' && localStorage.getItem('gh_username')) loadGitHub();
     if (name === 'timesheet') loadTimesheet();
   }
 
@@ -1644,12 +1720,21 @@
   // ═══════════════════════════════════════
   // KANBAN
   // ═══════════════════════════════════════
-  function addKanban(col) {
+  async function addKanban(col) {
     const input = document.getElementById('kanban-' + col + '-input');
+    const repoInput = document.getElementById('kanban-' + col + '-repo');
     const text = input.value.trim();
     if (!text) return;
-    state.kanban[col].push({ id: Date.now(), text });
+    const repoUrl = repoInput ? repoInput.value.trim() : '';
+    const card = { id: Date.now(), text, repoUrl: '', description: '', language: '', stars: 0 };
+    if (repoUrl) {
+      card.repoUrl = repoUrl;
+      const info = await fetchRepoInfo(repoUrl);
+      if (info) { card.description = info.description || ''; card.language = info.language || ''; card.stars = info.stargazers_count || 0; }
+    }
+    state.kanban[col].push(card);
     input.value = '';
+    if (repoInput) repoInput.value = '';
     saveState(); renderKanban();
   }
 
@@ -1673,14 +1758,23 @@
       .join('');
   }
 
-  function editKanban(id, col) {
+  async function editKanban(id, col) {
     const item = state.kanban[col].find(k => k.id === id);
     if (!item) return;
-    const newText = prompt('Edit card:', item.text);
-    if (newText !== null && newText.trim()) {
-      item.text = newText.trim();
-      saveState(); renderKanban();
+    const newText = prompt('Edit project name:', item.text);
+    if (newText === null) return;
+    if (newText.trim()) item.text = newText.trim();
+    const newUrl = prompt('GitHub URL (leave blank to remove):', item.repoUrl || '');
+    if (newUrl !== null) {
+      item.repoUrl = newUrl.trim();
+      if (newUrl.trim()) {
+        const info = await fetchRepoInfo(newUrl.trim());
+        if (info) { item.description = info.description || ''; item.language = info.language || ''; item.stars = info.stargazers_count || 0; }
+      } else {
+        item.description = ''; item.language = ''; item.stars = 0;
+      }
     }
+    saveState(); renderKanban();
   }
 
   function renderKanban() {
@@ -1690,7 +1784,13 @@
       el.innerHTML = state.kanban[col].map(item => `
         <div class="kanban-card">
           <button class="delete-card" onclick="deleteKanban(${item.id},'${col}')">×</button>
-          <div style="margin-bottom:0.4rem">${item.text}</div>
+          <div style="font-weight:500; margin-bottom:0.25rem; padding-right:1.2rem">${item.text}</div>
+          ${item.description ? `<div class="kanban-card-desc">${item.description}</div>` : ''}
+          <div class="kanban-card-meta">
+            ${item.language ? `<span class="kanban-lang-chip">${item.language}</span>` : ''}
+            ${item.stars ? `<span style="font-size:0.72rem; color:var(--accent3); font-family:'DM Mono',monospace">★ ${item.stars}</span>` : ''}
+            ${item.repoUrl ? `<a class="kanban-gh-link" href="${item.repoUrl}" target="_blank">↗ GitHub</a>` : ''}
+          </div>
           <div style="display:flex; align-items:center; gap:0.3rem; flex-wrap:wrap;">
             ${kanbanMoveButtons(item.id, col)}
             <button class="btn-edit" style="opacity:0" onclick="editKanban(${item.id},'${col}')">edit</button>
@@ -1698,6 +1798,98 @@
         </div>
       `).join('');
     });
+  }
+
+  // ═══════════════════════════════════════
+  // GITHUB
+  // ═══════════════════════════════════════
+  function ghHeaders() {
+    const pat = (document.getElementById('gh-pat') || {}).value?.trim() || localStorage.getItem('gh_pat') || '';
+    const h = { 'Accept': 'application/vnd.github+json' };
+    if (pat) h['Authorization'] = `Bearer ${pat}`;
+    return h;
+  }
+
+  async function fetchRepoInfo(url) {
+    const match = url.match(/github\.com\/([^/]+)\/([^/?#]+)/);
+    if (!match) return null;
+    try {
+      const res = await fetch(`https://api.github.com/repos/${match[1]}/${match[2]}`, { headers: ghHeaders() });
+      return res.ok ? res.json() : null;
+    } catch { return null; }
+  }
+
+  async function loadGitHub() {
+    const usernameEl = document.getElementById('gh-username');
+    const patEl = document.getElementById('gh-pat');
+    const username = usernameEl.value.trim() || localStorage.getItem('gh_username') || '';
+    const pat = patEl.value.trim();
+    if (!username) { document.getElementById('gh-status').textContent = 'Enter a GitHub username.'; return; }
+    localStorage.setItem('gh_username', username);
+    if (pat) localStorage.setItem('gh_pat', pat);
+
+    document.getElementById('gh-status').textContent = 'Loading...';
+    document.getElementById('gh-repos').innerHTML = '<div class="loading">Fetching repos...</div>';
+    document.getElementById('gh-issues').innerHTML = '<div class="loading">Fetching issues...</div>';
+
+    // ── Repos ──
+    try {
+      const res = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=12`, { headers: ghHeaders() });
+      if (!res.ok) throw new Error(res.status);
+      const repos = await res.json();
+      document.getElementById('gh-repo-count').textContent = `${repos.length} repos`;
+      document.getElementById('gh-repos').innerHTML = repos.length ? `
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:0.75rem">
+          ${repos.map(r => `
+            <a href="${r.html_url}" target="_blank" style="text-decoration:none; color:inherit">
+              <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:0.95rem 1rem; transition:border-color 0.2s, transform 0.2s, box-shadow 0.2s; cursor:pointer"
+                   onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(124,106,247,0.2)'"
+                   onmouseout="this.style.borderColor='';this.style.transform='';this.style.boxShadow=''">
+                <div style="font-weight:600; font-size:0.93rem; margin-bottom:0.25rem; color:var(--accent)">${r.name}</div>
+                ${r.description ? `<div style="font-size:0.8rem; color:var(--muted); margin-bottom:0.5rem; line-height:1.4">${r.description}</div>` : ''}
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center">
+                  ${r.language ? `<span style="font-size:0.72rem; background:rgba(124,106,247,0.15); color:var(--accent); border-radius:4px; padding:1px 7px; font-family:'DM Mono',monospace">${r.language}</span>` : ''}
+                  ${r.stargazers_count ? `<span style="font-size:0.72rem; color:var(--accent3); font-family:'DM Mono',monospace">★ ${r.stargazers_count}</span>` : ''}
+                  <span style="font-size:0.72rem; color:var(--muted); font-family:'DM Mono',monospace; margin-left:auto">${new Date(r.updated_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </a>
+          `).join('')}
+        </div>
+      ` : '<div class="empty">No public repos found</div>';
+      document.getElementById('gh-status').textContent = `Loaded ${repos.length} repos`;
+    } catch(e) {
+      document.getElementById('gh-repos').innerHTML = `<div class="empty">Failed to load repos — check username or rate limit</div>`;
+      document.getElementById('gh-status').textContent = 'Error loading repos';
+    }
+
+    // ── Issues / PRs (needs PAT) ──
+    const savedPat = localStorage.getItem('gh_pat') || '';
+    if (!savedPat) {
+      document.getElementById('gh-issues').innerHTML = '<div class="empty">Enter a Personal Access Token to load issues &amp; PRs</div>';
+      return;
+    }
+    try {
+      const res = await fetch(`https://api.github.com/issues?filter=created&state=open&per_page=20`, { headers: ghHeaders() });
+      if (!res.ok) throw new Error(res.status);
+      const issues = await res.json();
+      document.getElementById('gh-issues').innerHTML = issues.length ? issues.map(i => {
+        const isPR = !!i.pull_request;
+        const repo = i.repository_url.replace('https://api.github.com/repos/', '');
+        return `
+          <div style="display:flex; align-items:flex-start; gap:0.75rem; padding:0.75rem 0.9rem; border:1px solid var(--border); border-radius:10px; background:var(--surface2); margin-bottom:0.55rem;
+                      transition:border-color 0.2s, transform 0.2s" onmouseover="this.style.borderColor='${isPR ? 'var(--accent2)' : 'var(--accent5)'}';this.style.transform='translateX(3px)'" onmouseout="this.style.borderColor='';this.style.transform=''">
+            <span style="font-size:0.82rem; padding:1px 7px; border-radius:4px; background:${isPR ? 'rgba(78,205,196,0.15)' : 'rgba(74,158,255,0.15)'}; color:${isPR ? 'var(--accent2)' : 'var(--accent5)'}; font-family:'DM Mono',monospace; flex-shrink:0; margin-top:1px">${isPR ? 'PR' : '#' + i.number}</span>
+            <div style="flex:1; min-width:0">
+              <a href="${i.html_url}" target="_blank" style="font-weight:500; font-size:0.93rem; color:var(--text); text-decoration:none" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text)'">${i.title}</a>
+              <div style="font-size:0.78rem; color:var(--muted); margin-top:0.15rem; font-family:'DM Mono',monospace">${repo}</div>
+            </div>
+            <span style="font-size:0.75rem; color:var(--muted); font-family:'DM Mono',monospace; flex-shrink:0">${new Date(i.updated_at).toLocaleDateString()}</span>
+          </div>`;
+      }).join('') : '<div class="empty">No open issues or PRs</div>';
+    } catch(e) {
+      document.getElementById('gh-issues').innerHTML = '<div class="empty">Failed to load issues — check your PAT permissions</div>';
+    }
   }
 
   // ═══════════════════════════════════════
@@ -2212,7 +2404,7 @@
     // Strip any old h/m suffix before re-formatting
     const n = parseFloat(String(val).replace(/[hm]$/i, '').trim());
     if (isNaN(n)) return String(val);
-    if (n >= 1 && n <= 9) return n + ':00';
+    if (n >= 0 && n <= 9) return n + ':00';
     if (n >= 10 && n <= 59) return '0:' + String(n).padStart(2, '0');
     return String(val);
   }
@@ -2246,56 +2438,109 @@
       container.innerHTML = '<div class="empty">No timesheet data found.</div>';
       return;
     }
+
+    function makeWeekTable(month, weekDates, startIdx) {
+      return `
+        <table class="timesheet-table">
+          <thead><tr>
+            <th class="ts-act-header">Activity</th>
+            ${weekDates.map(d => `<th>${formatDateShort(d)}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${month.rows.map(row => `
+              <tr>
+                <td class="ts-act-cell">${row.activity}</td>
+                ${row.cells.slice(startIdx, startIdx + weekDates.length).map(cell => `
+                  <td><span
+                    class="ts-cell"
+                    contenteditable="true"
+                    data-row="${cell.sheet_row}"
+                    data-col="${cell.sheet_col}"
+                    data-sheet="${month.sheet_name}"
+                    data-original="${formatTimeDisplay(cell.value)}"
+                    onblur="onTsCellBlur(this)"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();return false}"
+                  >${formatTimeDisplay(cell.value)}</span></td>
+                `).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    }
+
     let html = '';
     data.months.forEach((month, mi) => {
       const isOpen = mi === 0 ? 'open' : '';
       const isEmpty = month.rows.every(r => r.cells.every(c => !c.value));
       const deleteBtn = isEmpty
-        ? `<button onclick="event.preventDefault();deleteTimesheetMonth('${month.key}','${month.label}')" style="margin-left:auto;background:rgba(247,106,106,0.12);color:var(--accent4);border:1px solid rgba(247,106,106,0.3);border-radius:0.3rem;padding:0.15rem 0.6rem;font-size:0.73rem;cursor:pointer">Delete</button>`
+        ? `<button onclick="event.preventDefault();deleteTimesheetMonth('${month.sheet_name}','${month.label}')" style="margin-left:auto;background:rgba(247,106,106,0.12);color:var(--accent4);border:1px solid rgba(247,106,106,0.3);border-radius:0.3rem;padding:0.15rem 0.6rem;font-size:0.73rem;cursor:pointer">Delete</button>`
         : '';
+
+      // Split dates into chunks of 7 (one per week)
+      const weeks = [];
+      for (let i = 0; i < month.dates.length; i += 7) {
+        weeks.push({ dates: month.dates.slice(i, i + 7), startIdx: i });
+      }
+
+      const mKey = month.key.replace(/-/g, '_');
+
+      const tabBar = weeks.length > 1 ? `
+        <div class="ts-week-tabs">
+          ${weeks.map((w, wi) => {
+            const first = parseInt(w.dates[0].split('/')[1]);
+            const last  = parseInt(w.dates[w.dates.length - 1].split('/')[1]);
+            return `<button class="ts-week-tab ${wi === 0 ? 'active' : ''}" onclick="switchTsWeek('${mKey}',${wi})">${first}–${last}</button>`;
+          }).join('')}
+        </div>` : '';
+
+      const panes = weeks.map((w, wi) => `
+        <div class="ts-week-pane ${wi === 0 ? 'active' : ''}">
+          ${makeWeekTable(month, w.dates, w.startIdx)}
+        </div>`).join('');
+
       html += `<details class="timesheet-month card" ${isOpen}>
         <summary><span class="ts-arrow">▶</span>${month.label} <span style="color:var(--muted);font-size:0.78rem;font-weight:400;margin-left:0.4rem">${month.dates.length} days</span>${deleteBtn}</summary>
-        <div class="timesheet-table-wrap">
-          <table class="timesheet-table">
-            <thead><tr>
-              <th class="ts-act-header">Activity</th>
-              ${month.dates.map(d => `<th>${formatDateShort(d)}</th>`).join('')}
-            </tr></thead>
-            <tbody>
-              ${month.rows.map(row => `
-                <tr>
-                  <td class="ts-act-cell">${row.activity}</td>
-                  ${row.cells.map(cell => `
-                    <td><span
-                      class="ts-cell"
-                      contenteditable="true"
-                      data-row="${cell.sheet_row}"
-                      data-col="${cell.sheet_col}"
-                      data-sheet="${data.sheet_name}"
-                      data-original="${cell.value}"
-                      onblur="onTsCellBlur(this)"
-                      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();return false}"
-                    >${formatTimeDisplay(cell.value)}</span></td>
-                  `).join('')}
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+        <div class="timesheet-table-wrap" id="ts-month-${mKey}">
+          ${tabBar}
+          ${panes}
         </div>
       </details>`;
     });
+
     container.innerHTML = html;
+
+    // Smooth close animation for each month
+    container.querySelectorAll('details.timesheet-month').forEach(details => {
+      details.querySelector('summary').addEventListener('click', e => {
+        if (!details.open) return;
+        e.preventDefault();
+        const content = details.querySelector('.timesheet-table-wrap');
+        if (!content) { details.removeAttribute('open'); return; }
+        content.style.animation = 'tsClose 0.32s cubic-bezier(0.4,0,0.2,1) forwards';
+        content.addEventListener('animationend', () => {
+          details.removeAttribute('open');
+          content.style.animation = '';
+        }, { once: true });
+      });
+    });
+  }
+
+  function switchTsWeek(mKey, weekIdx) {
+    const wrap = document.getElementById('ts-month-' + mKey);
+    if (!wrap) return;
+    wrap.querySelectorAll('.ts-week-tab').forEach((t, i) => t.classList.toggle('active', i === weekIdx));
+    wrap.querySelectorAll('.ts-week-pane').forEach((p, i) => p.classList.toggle('active', i === weekIdx));
   }
 
   async function onTsCellBlur(el) {
     const raw = el.textContent.trim();
-    // Strip h/m suffix only for bare numbers; leave H:MM format alone
-    const numeric = /^\d+:\d{2}$/.test(raw) ? raw : raw.replace(/[hm]$/i, '').trim();
-    const original = el.dataset.original || '';
-
-    const formatted = formatTimeDisplay(numeric);
+    // Normalise input then auto-format to H:MM
+    const stripped = /^\d+:\d{2}$/.test(raw) ? raw : raw.replace(/[hm]$/i, '').trim();
+    const formatted = formatTimeDisplay(stripped);
     if (el.textContent.trim() !== formatted) el.textContent = formatted;
-    if (numeric === original) return;
+
+    const original = el.dataset.original || '';
+    if (formatted === original) return;   // nothing changed
 
     const sheetRow = parseInt(el.dataset.row);
     const sheetCol = parseInt(el.dataset.col);
@@ -2306,10 +2551,10 @@
       const res = await fetch(`${SERVER}/api/timesheet/update`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ row: sheetRow, col: sheetCol, value: numeric, sheet_name: sheetName }),
+        body: JSON.stringify({ row: sheetRow, col: sheetCol, value: formatted, sheet_name: sheetName }),
       });
       const json = await res.json();
-      if (json.success) el.dataset.original = numeric;
+      if (json.success) el.dataset.original = formatted;
     } catch(e) { console.error('Timesheet update failed', e); }
     el.classList.remove('saving');
   }

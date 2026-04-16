@@ -18,7 +18,7 @@ import json         # built-in: read/write JSON files
 from pathlib import Path  # built-in: cleaner file path handling
 
 from dotenv import load_dotenv   # pip: reads your .env file
-from flask import Flask, request, redirect, jsonify  # pip: web framework
+from flask import Flask, request, redirect, jsonify, send_file  # pip: web framework
 from flask_cors import CORS      # pip: allows browser to talk to this server
 
 # Google API libraries
@@ -68,6 +68,10 @@ SCOPES = [
 # Flask is the web framework. Think of it like Express in Node.
 app = Flask(__name__)
 CORS(app)  # allows the HTML page to call our API
+
+@app.route("/")
+def serve_index():
+    return send_file(BASE_DIR / "index.html")
 
 # Allow OAuth over plain http during local dev
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -1056,49 +1060,56 @@ def api_timesheet():
         return jsonify({"error": "not_authenticated"}), 401
     try:
         from datetime import datetime as dt
-        from collections import defaultdict
+        MONTH_NAMES = ['January','February','March','April','May','June',
+                       'July','August','September','October','November','December']
         sheets_svc = build("sheets", "v4", credentials=creds)
         meta = sheets_svc.spreadsheets().get(spreadsheetId=TIMESHEET_ID).execute()
-        sheet_name = meta["sheets"][0]["properties"]["title"]
-        result = sheets_svc.spreadsheets().values().get(
-            spreadsheetId=TIMESHEET_ID,
-            range=sheet_name
-        ).execute()
-        values = result.get("values", [])
-        if not values or len(values) < 2:
-            return jsonify({"months": [], "sheet_name": sheet_name})
-
-        headers = values[0]
-        date_cols = []
-        for col_i, h in enumerate(headers[1:], start=1):
-            try:
-                raw = h.strip()
-                date_obj = dt.strptime(raw, "%m/%d/%y") if len(raw.split('/')[-1]) == 2 else dt.strptime(raw, "%m/%d/%Y")
-                date_cols.append({
-                    "col_index": col_i,
-                    "sheet_col": col_i + 1,
-                    "date_str": h.strip(),
-                    "date_obj": date_obj,
-                    "month_key": date_obj.strftime("%Y-%m"),
-                })
-            except Exception:
-                pass
-
-        months_dict = defaultdict(list)
-        for dc in date_cols:
-            months_dict[dc["month_key"]].append(dc)
 
         months = []
-        for month_key in sorted(months_dict.keys(), reverse=True):
-            cols = months_dict[month_key]
-            month_label = cols[0]["date_obj"].strftime("%B %Y")
+        for sheet in meta["sheets"]:
+            title = sheet["properties"]["title"].strip()
+            # Expect tab names like "March 2026"
+            parts = title.split()
+            if len(parts) != 2 or parts[0] not in MONTH_NAMES:
+                continue
+            try:
+                year = int(parts[1])
+                month_num = MONTH_NAMES.index(parts[0]) + 1
+            except Exception:
+                continue
+
+            month_key = f"{year}-{month_num:02d}"
+
+            result = sheets_svc.spreadsheets().values().get(
+                spreadsheetId=TIMESHEET_ID,
+                range=f"'{title}'"
+            ).execute()
+            values = result.get("values", [])
+            if not values or len(values) < 2:
+                continue
+
+            headers = values[0]
+            date_cols = []
+            for col_i, h in enumerate(headers[1:], start=1):
+                try:
+                    raw = h.strip()
+                    date_obj = dt.strptime(raw, "%m/%d/%y") if len(raw.split('/')[-1]) == 2 else dt.strptime(raw, "%m/%d/%Y")
+                    date_cols.append({
+                        "col_index": col_i,
+                        "sheet_col": col_i + 1,
+                        "date_str": raw,
+                        "date_obj": date_obj,
+                    })
+                except Exception:
+                    pass
+
             rows = []
             for row_i, row in enumerate(values[1:], start=1):
                 activity = row[0] if row else ""
                 if not activity:
                     continue
                 cells = []
-                for dc in cols:
+                for dc in date_cols:
                     ci = dc["col_index"]
                     val = row[ci] if ci < len(row) else ""
                     cells.append({
@@ -1108,14 +1119,17 @@ def api_timesheet():
                         "date": dc["date_str"],
                     })
                 rows.append({"activity": activity, "cells": cells})
+
             months.append({
                 "key": month_key,
-                "label": month_label,
-                "dates": [dc["date_str"] for dc in cols],
+                "label": title,
+                "sheet_name": title,
+                "dates": [dc["date_str"] for dc in date_cols],
                 "rows": rows,
             })
 
-        return jsonify({"months": months, "sheet_name": sheet_name})
+        months.sort(key=lambda m: m["key"], reverse=True)
+        return jsonify({"months": months})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error": str(e)}), 500
@@ -1159,49 +1173,65 @@ def api_timesheet_add_month():
         return jsonify({"error": "not_authenticated"}), 401
     try:
         import calendar
-        from datetime import datetime as dt
+        MONTH_NAMES = ['January','February','March','April','May','June',
+                       'July','August','September','October','November','December']
         body = request.get_json()
         year = int(body["year"])
         month = int(body["month"])
+        tab_title = f"{MONTH_NAMES[month - 1]} {year}"
 
         sheets_svc = build("sheets", "v4", credentials=creds)
         meta = sheets_svc.spreadsheets().get(spreadsheetId=TIMESHEET_ID).execute()
-        sheet_name = meta["sheets"][0]["properties"]["title"]
+        existing_titles = [s["properties"]["title"] for s in meta["sheets"]]
 
-        # Read existing headers to find last column and check for duplicates
-        result = sheets_svc.spreadsheets().values().get(
-            spreadsheetId=TIMESHEET_ID, range=f"{sheet_name}!1:1"
+        if tab_title in existing_titles:
+            return jsonify({"days_added": 0, "message": "Tab already exists"})
+
+        # Find the most recent existing month tab by date, then copy its activity list
+        month_tabs = []
+        for s in meta["sheets"]:
+            t = s["properties"]["title"].strip().split()
+            if len(t) == 2 and t[0] in MONTH_NAMES:
+                try:
+                    mn = MONTH_NAMES.index(t[0]) + 1
+                    yr = int(t[1])
+                    month_tabs.append((yr, mn, s["properties"]["title"]))
+                except Exception:
+                    pass
+
+        activity_list = []
+        if month_tabs:
+            month_tabs.sort(reverse=True)   # newest first by (year, month)
+            source_tab = month_tabs[0][2]
+            res = sheets_svc.spreadsheets().values().get(
+                spreadsheetId=TIMESHEET_ID,
+                range=f"'{source_tab}'!A:A"
+            ).execute()
+            col_a = res.get("values", [])
+            # Skip the header row ("Activity") and collect all non-empty names
+            activity_list = [r[0].strip() for r in col_a[1:] if r and r[0].strip()]
+
+        # Create the new tab
+        sheets_svc.spreadsheets().batchUpdate(
+            spreadsheetId=TIMESHEET_ID,
+            body={"requests": [{"addSheet": {"properties": {"title": tab_title}}}]}
         ).execute()
-        existing_headers = result.get("values", [[]])[0]
 
-        # Generate all days in the month as m/d/yy
+        # Build header + activity rows
         days_in_month = calendar.monthrange(year, month)[1]
-        new_dates = []
-        for day in range(1, days_in_month + 1):
-            date_str = f"{month}/{day}/{str(year)[2:]}"
-            if date_str not in existing_headers:
-                new_dates.append(date_str)
+        dates = [f"{month}/{day}/{str(year)[2:]}" for day in range(1, days_in_month + 1)]
+        rows_to_write = [["Activity"] + dates]
+        for act in activity_list:
+            rows_to_write.append([act] + [""] * days_in_month)
 
-        if not new_dates:
-            return jsonify({"days_added": 0, "message": "Month already exists"})
-
-        # Append new date headers after the last existing column
-        start_col = len(existing_headers) + 1
-        col_letter = ""
-        c = start_col
-        while c > 0:
-            c, rem = divmod(c - 1, 26)
-            col_letter = chr(65 + rem) + col_letter
-
-        range_ref = f"'{sheet_name}'!{col_letter}1"
         sheets_svc.spreadsheets().values().update(
             spreadsheetId=TIMESHEET_ID,
-            range=range_ref,
+            range=f"'{tab_title}'!A1",
             valueInputOption="RAW",
-            body={"values": [new_dates]},
+            body={"values": rows_to_write},
         ).execute()
 
-        return jsonify({"days_added": len(new_dates)})
+        return jsonify({"days_added": days_in_month})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error": str(e)}), 500
@@ -1213,52 +1243,26 @@ def api_timesheet_delete_month():
     if not creds:
         return jsonify({"error": "not_authenticated"}), 401
     try:
-        from datetime import datetime as dt
         body = request.get_json()
-        month_key = body["month_key"]  # "2026-05"
-        year, month = map(int, month_key.split("-"))
+        tab_title = body["month_key"]  # now the tab title e.g. "April 2026"
 
         sheets_svc = build("sheets", "v4", credentials=creds)
         meta = sheets_svc.spreadsheets().get(spreadsheetId=TIMESHEET_ID).execute()
-        sheet_name = meta["sheets"][0]["properties"]["title"]
-        sheet_id   = meta["sheets"][0]["properties"]["sheetId"]
 
-        result = sheets_svc.spreadsheets().values().get(
-            spreadsheetId=TIMESHEET_ID, range=f"{sheet_name}!1:1"
-        ).execute()
-        headers = result.get("values", [[]])[0]
+        sheet_id = None
+        for s in meta["sheets"]:
+            if s["properties"]["title"] == tab_title:
+                sheet_id = s["properties"]["sheetId"]
+                break
 
-        cols_to_delete = []
-        for i, h in enumerate(headers):
-            try:
-                raw = h.strip()
-                date_obj = dt.strptime(raw, "%m/%d/%y") if len(raw.split("/")[-1]) == 2 else dt.strptime(raw, "%m/%d/%Y")
-                if date_obj.year == year and date_obj.month == month:
-                    cols_to_delete.append(i)
-            except Exception:
-                pass
-
-        if not cols_to_delete:
-            return jsonify({"error": "Month not found"}), 404
-
-        requests_body = []
-        for col_i in sorted(cols_to_delete, reverse=True):
-            requests_body.append({
-                "deleteDimension": {
-                    "range": {
-                        "sheetId": sheet_id,
-                        "dimension": "COLUMNS",
-                        "startIndex": col_i,
-                        "endIndex": col_i + 1,
-                    }
-                }
-            })
+        if sheet_id is None:
+            return jsonify({"error": "Tab not found"}), 404
 
         sheets_svc.spreadsheets().batchUpdate(
             spreadsheetId=TIMESHEET_ID,
-            body={"requests": requests_body},
+            body={"requests": [{"deleteSheet": {"sheetId": sheet_id}}]}
         ).execute()
-        return jsonify({"success": True, "deleted_cols": len(cols_to_delete)})
+        return jsonify({"success": True})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error": str(e)}), 500
@@ -1271,4 +1275,4 @@ def api_timesheet_delete_month():
 if __name__ == "__main__":
     print(f"Dashboard server running at http://localhost:{PORT}")
     print("Open your dashboard and click 'Connect Google Account'")
-    app.run(port=PORT, debug=False)
+    app.run(host="0.0.0.0", port=PORT, debug=False)
