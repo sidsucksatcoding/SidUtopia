@@ -223,7 +223,7 @@ def auth_callback():
         scopes=SCOPES,
     )
     save_tokens(creds)
-    return redirect("http://127.0.0.1:5500/index.html?auth=success")
+    return redirect("/?auth=success")
 
 
 @app.route("/auth/status")
