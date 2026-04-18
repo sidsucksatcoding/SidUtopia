@@ -1967,6 +1967,7 @@
 
   function renderExams() {
     const list = document.getElementById('exam-list');
+    if (!list) return;
     if (!state.exams.length) { list.innerHTML = '<div class="empty">No exams added yet</div>'; return; }
     const sorted = [...state.exams].sort((a, b) => new Date(a.date) - new Date(b.date));
     list.innerHTML = sorted.map(exam => {
