@@ -967,6 +967,7 @@
       <div class="user-info">
         <div class="avatar" id="user-avatar">?</div>
         <span class="user-name" id="user-name">...</span>
+        <button class="sign-out-btn" id="sms-btn" onclick="sendSummary()" style="border-color:var(--accent2); color:var(--accent2); margin-right:0.4rem">📱 Send Summary</button>
         <button class="sign-out-btn" onclick="signOut()">Sign out</button>
       </div>
     </header>
@@ -1289,6 +1290,29 @@
       const data = await res.json();
       return data.loggedIn;
     } catch(e) { return false; }
+  }
+
+  async function sendSummary() {
+    const btn = document.getElementById('sms-btn');
+    btn.textContent = '⏳ Sending...';
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${SERVER}/api/send-summary`, { method: 'POST' });
+      const json = await res.json();
+      if (json.success) {
+        btn.textContent = `✓ Sent to ${json.sent_to}`;
+        btn.style.color = 'var(--accent2)';
+        setTimeout(() => { btn.textContent = '📱 Send Summary'; btn.disabled = false; }, 3000);
+      } else {
+        btn.textContent = '✗ Failed';
+        btn.style.color = 'var(--accent4)';
+        setTimeout(() => { btn.textContent = '📱 Send Summary'; btn.disabled = false; }, 3000);
+        console.error(json.error);
+      }
+    } catch(e) {
+      btn.textContent = '✗ Error';
+      setTimeout(() => { btn.textContent = '📱 Send Summary'; btn.disabled = false; }, 3000);
+    }
   }
 
   async function signOut() {

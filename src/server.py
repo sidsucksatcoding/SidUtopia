@@ -46,6 +46,12 @@ CLIENT_SECRET = os.environ["GOOGLE_CLIENT_SECRET"]
 REDIRECT_URI  = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:3000/auth/callback")
 PORT          = int(os.environ.get("PORT", 3000))
 
+# Twilio SMS config
+TWILIO_SID  = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_FROM = os.environ.get("TWILIO_FROM", "")
+TWILIO_TO   = [n.strip() for n in os.environ.get("TWILIO_TO", "").split(",") if n.strip()]
+
 # The Zenith Google Doc ID (same as before)
 ZENITH_DOC_ID = "1DCWSwpSohO_8eIe5Lsb1X7qlpgeE67L70JyohXO1BUc"
 
@@ -1263,6 +1269,150 @@ def api_timesheet_delete_month():
             body={"requests": [{"deleteSheet": {"sheetId": sheet_id}}]}
         ).execute()
         return jsonify({"success": True})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
+#  SMS SUMMARY
+# ─────────────────────────────────────────────────────────────
+
+@app.route("/api/send-summary", methods=["POST"])
+def api_send_summary():
+    creds = load_tokens()
+    if not creds:
+        return jsonify({"error": "not_authenticated"}), 401
+    if not TWILIO_SID or not TWILIO_AUTH or not TWILIO_FROM or not TWILIO_TO:
+        return jsonify({"error": "Twilio not configured"}), 500
+
+    try:
+        from datetime import datetime, timezone, timedelta
+        from twilio.rest import Client
+
+        today = datetime.now(timezone.utc)
+        date_str = today.strftime("%b ") + str(today.day)  # cross-platform, no leading zero
+        lines = [f"SidUtopia Summary — {date_str}", ""]
+
+        # ── Timesheet: today's hours ──
+        try:
+            MONTH_NAMES = ['January','February','March','April','May','June',
+                           'July','August','September','October','November','December']
+            tab_title = f"{MONTH_NAMES[today.month - 1]} {today.year}"
+            today_variants = {
+                f"{today.month}/{today.day}/{str(today.year)[2:]}",
+                f"{today.month}/{today.day}/{today.year}",
+            }
+            sheets_svc = build("sheets", "v4", credentials=creds)
+            result = sheets_svc.spreadsheets().values().get(
+                spreadsheetId=TIMESHEET_ID, range=f"'{tab_title}'"
+            ).execute()
+            values = result.get("values", [])
+            if values and len(values) > 1:
+                headers = values[0]
+                today_col = next((i for i, h in enumerate(headers) if h.strip() in today_variants), None)
+                if today_col is not None:
+                    entries = [
+                        f"  {row[0]}: {row[today_col]}"
+                        for row in values[1:]
+                        if len(row) > today_col and row[0] and row[today_col]
+                    ]
+                    if entries:
+                        lines.append("TODAY'S TIMESHEET")
+                        lines.extend(entries)
+                        lines.append("")
+        except Exception:
+            pass
+
+        # ── Calendar: next 7 days ──
+        try:
+            cal_svc = build("calendar", "v3", credentials=creds)
+            t_min = today.isoformat()
+            t_max = (today + timedelta(days=7)).isoformat()
+            result = cal_svc.events().list(
+                calendarId="primary", timeMin=t_min, timeMax=t_max,
+                maxResults=6, singleEvents=True, orderBy="startTime"
+            ).execute()
+            events = result.get("items", [])
+            if events:
+                lines.append("UPCOMING EVENTS")
+                for e in events:
+                    start = e["start"].get("dateTime") or e["start"].get("date", "")
+                    try:
+                        dt = datetime.fromisoformat(start.replace("Z", "+00:00"))
+                        label = dt.strftime("%b ") + str(dt.day)
+                    except Exception:
+                        label = start[:10]
+                    lines.append(f"  {label} — {e.get('summary', '(no title)')}")
+                lines.append("")
+        except Exception:
+            pass
+
+        # ── Zenith: open action items from most recent meeting ──
+        try:
+            import re
+            docs_svc = build("docs", "v1", credentials=creds)
+            doc = docs_svc.documents().get(documentId=ZENITH_DOC_ID, includeTabsContent=True).execute()
+            tabs = doc.get("tabs", [])
+            # find the highest-numbered meeting tab
+            numbered = []
+            for tab in tabs:
+                title = tab.get("tabProperties", {}).get("title", "")
+                m = re.search(r"\d+", title)
+                if m and "template" not in title.lower():
+                    numbered.append((int(m.group()), tab))
+            if numbered:
+                numbered.sort(reverse=True)
+                _, latest_tab = numbered[0]
+                content = latest_tab.get("documentTab", {}).get("body", {}).get("content", [])
+                in_ai = False
+                items = []
+                for block in content:
+                    if "paragraph" not in block:
+                        continue
+                    para = block["paragraph"]
+                    text = "".join(e.get("textRun", {}).get("content", "") for e in para.get("elements", [])).strip()
+                    style = para.get("paragraphStyle", {}).get("namedStyleType", "")
+                    if style == "HEADING_2" and "action items" in text.lower() and "previous" not in text.lower() and re.search(r"#+\d+", text):
+                        in_ai = True; continue
+                    if in_ai and style in ("HEADING_1", "HEADING_2"):
+                        in_ai = False
+                    if in_ai and para.get("bullet") and len(text) > 2:
+                        items.append(f"  • {text}")
+                if items:
+                    tab_title_z = latest_tab.get("tabProperties", {}).get("title", "")
+                    lines.append(f"ZENITH ({tab_title_z})")
+                    lines.extend(items[:5])
+                    lines.append("")
+        except Exception:
+            pass
+
+        # ── Dashboard: in-progress kanban ──
+        try:
+            data = load_data()
+            in_progress = [k.get("text", "") for k in data.get("kanban", {}).get("inprogress", [])]
+            open_todos  = [t.get("text", "") for t in data.get("mathTodos", []) if not t.get("done")]
+            if in_progress:
+                lines.append("IN PROGRESS")
+                lines.extend(f"  • {t}" for t in in_progress[:4])
+                lines.append("")
+            if open_todos:
+                lines.append("OPEN TODOS")
+                lines.extend(f"  • {t}" for t in open_todos[:4])
+                lines.append("")
+        except Exception:
+            pass
+
+        lines.append("— Sid's Utopia")
+        message = "\n".join(lines)
+
+        # ── Send via Twilio ──
+        client = Client(TWILIO_SID, TWILIO_AUTH)
+        for number in TWILIO_TO:
+            client.messages.create(body=message, from_=TWILIO_FROM, to=number)
+
+        return jsonify({"success": True, "sent_to": len(TWILIO_TO), "preview": message})
+
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error": str(e)}), 500
