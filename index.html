@@ -1302,12 +1302,15 @@
       if (json.success) {
         btn.textContent = `✓ Sent to ${json.sent_to}`;
         btn.style.color = 'var(--accent2)';
-        setTimeout(() => { btn.textContent = '📱 Send Summary'; btn.disabled = false; }, 3000);
+        setTimeout(() => { btn.textContent = '📱 Send Summary'; btn.disabled = false; btn.style.color = ''; }, 4000);
       } else {
+        const msg = json.error || 'unknown error';
         btn.textContent = '✗ Failed';
         btn.style.color = 'var(--accent4)';
-        setTimeout(() => { btn.textContent = '📱 Send Summary'; btn.disabled = false; }, 3000);
-        console.error(json.error);
+        btn.title = msg;
+        console.error('Send Summary error:', msg);
+        alert(`Send Summary failed:\n${msg}`);
+        setTimeout(() => { btn.textContent = '📱 Send Summary'; btn.disabled = false; btn.style.color = ''; btn.title = ''; }, 4000);
       }
     } catch(e) {
       btn.textContent = '✗ Error';

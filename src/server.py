@@ -30,12 +30,14 @@ from requests_oauthlib import OAuth2Session
 # ─── Load .env file ───────────────────────────────────────────
 # This reads your GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET etc.
 # from the .env file so we don't hardcode secrets in code.
-load_dotenv(override=True)   # override=True ensures a freshly edited .env is always picked up
-
 # ─── File paths ───────────────────────────────────────────────
 # Path(__file__).parent = src/
 # Path(__file__).parent.parent = project root (where .env, tokens.json, etc. live)
 BASE_DIR   = Path(__file__).parent.parent
+
+# Load .env from the project root explicitly so it works regardless of CWD
+# (e.g. gunicorn --chdir src changes CWD to src/, breaking plain load_dotenv())
+load_dotenv(BASE_DIR / ".env", override=True)
 TOKEN_FILE = BASE_DIR / "tokens.json"
 TIMESHEET_ID = "1lg7AQ6z2GaSHIRU4qVHfUPTJNkIUyQjtP5k5T8yKlcI"
 DATA_FILE  = BASE_DIR / "dashboard-data.json"
