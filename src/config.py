@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 #
 # So if config.py is at  /home/sid/SidUtopia/src/config.py
 # then BASE_DIR will be  /home/sid/SidUtopia/
-BASE_DIR = Path(__file__).parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ── Load the .env file ────────────────────────────────────────────────────────
 # dotenv reads the .env file and copies every line into Python's environment,
