@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<!--
+  templates/index.html
+  ────────────────────────────────────────────────────────────────────────────
+  This is the ONE HTML file that the browser loads.  It is intentionally kept
+  "slim" — all CSS lives in /static/css/main.css and all JavaScript lives in
+  separate /static/js/*.js files.  That makes the code much easier to read and
+  maintain: if you have a bug in the calendar you only open calendar.js, not a
+  single 2 700-line file.
+
+  Flask (our Python web server) serves this file via the render_template()
+  call in server.py.  Flask fills in the {{ url_for(...) }} placeholders below
+  with the real URL paths before sending the page to the browser.
+
+  If you have never seen HTML before, here is the basic idea:
+    • <head>  — invisible setup: fonts, stylesheets, page title
+    • <body>  — everything the user can actually see and interact with
+    • Tags like <div>, <button>, <input> are "boxes" on the page
+    • id="something" lets JavaScript find a specific box with getElementById
+    • onclick="doThing()" runs a JS function when the user clicks that element
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Makes the page look correct on phones (prevents shrinking) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sid's Utopia</title>
+
+  <!-- Google Fonts — loads two beautiful typefaces from the internet.
+       DM Sans  = the main text font
+       DM Mono  = used for code-style text (GitHub tokens, time values, etc.) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Our own stylesheet — all colours, layouts, animations.
+       url_for('static', ...) is Flask magic that gives us the correct path. -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+</head>
+<body>
+
+  <!-- ── COSMIC BACKGROUND ─────────────────────────────────────────────────
+       Two invisible layers sit behind everything else (z-index: 0).
+       stars.js draws 2 000 twinkling stars on #star-canvas.
+       The galaxies and shooting-star <div>s are injected into #star-field. -->
+  <canvas id="star-canvas"></canvas>
+  <div id="star-field"></div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       LOGIN SCREEN
+       Shown when the user has not yet connected their Google account.
+       auth.js hides this and shows #app once Google login is complete.
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">Sid's Utopia</div>
+      <p style="color:var(--muted); margin-bottom:1.8rem; font-size:0.92rem">Your personal command center</p>
+
+      <!-- Clicking this button calls connectGoogle() in auth.js,
+           which redirects the browser to Google's login page. -->
+      <button class="connect-btn" onclick="connectGoogle()">
+        <!-- Google's official coloured "G" icon (SVG = scalable vector graphic,
+             like a logo drawn with math rather than pixels) -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Connect Google Account
+      </button>
+      <p style="color:var(--muted); font-size:0.75rem; margin-top:1.2rem">Make sure your server is running first</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       MAIN APP  (hidden until Google login succeeds)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="app">
+
+    <!-- ── TOP HEADER BAR ─────────────────────────────────────────────── -->
+    <header>
+      <div class="header-left">
+        <span class="logo">Sid's Utopia</span>
+
+        <!-- Small coloured dot + text showing whether Google is connected.
+             auth.js updates the text and dot colour after checking /auth/status. -->
+        <div class="google-status" id="google-status">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Checking...</span>
+        </div>
+      </div>
+
+      <div class="user-info">
+        <!-- Single letter avatar — set by auth.js once we know the user's name -->
+        <div class="avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-name">...</span>
+
+        <!-- Send Summary button — calls sendSummary() in auth.js which hits
+             /api/send-summary on the server and fires an SMS via Twilio -->
+        <button
+          class="sign-out-btn"
+          id="sms-btn"
+          onclick="sendSummary()"
+          style="border-color:var(--accent2); color:var(--accent2); margin-right:0.4rem"
+        >📱 Send Summary</button>
+
+        <!-- Sign out clears the server-side Google token and reloads the page -->
+        <button class="sign-out-btn" onclick="signOut()">Sign out</button>
+      </div>
+    </header>
+
+    <!-- ── TAB BAR ────────────────────────────────────────────────────────
+         Clicking a tab calls switchTab(name, buttonEl) in tabs.js.
+         That function hides all .tab-panel divs and shows only the selected one. -->
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('zenith', this)">Zenith</button>
+      <button class="tab" onclick="switchTab('math', this)">Math</button>
+      <button class="tab" onclick="switchTab('coding', this)">Coding</button>
+      <button class="tab" onclick="switchTab('exams', this)">Exams &amp; Events</button>
+      <button class="tab" onclick="switchTab('google', this)">Google Data</button>
+      <button class="tab" onclick="switchTab('timesheet', this)">Timesheet</button>
+    </div>
+
+    <!-- ── TAB CONTENT AREA ───────────────────────────────────────────── -->
+    <div class="content">
+
+      <!-- ════════════════════════════════════════════════════════════════
+           ZENITH TAB  — college counselling action items & meeting notes
+      ════════════════════════════════════════════════════════════════════ -->
+      <div class="tab-panel active" id="tab-zenith">
+        <div class="section-header">
+          <span class="section-title">Zenith</span>
+          <span class="section-badge" style="background:#7c6af722; color:var(--accent)">College Counseling</span>
+        </div>
+
+        <!-- Items pulled live from your Google Doc -->
+        <div class="card">
+          <div style="display:flex; align-items:center; margin-bottom:1rem;">
+            <span class="card-title" style="margin:0">From Google Doc</span>
+            <!-- Dropdown populated by zenith.js after fetching the document -->
+            <select
+              id="meeting-select"
+              onchange="loadMeetingItems()"
+              style="margin-left:auto; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:0.3rem 0.6rem; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.85rem; outline:none;"
+            >
+              <option>Loading meetings...</option>
+            </select>
+            <button class="refresh-btn" onclick="fetchZenithDoc()" style="margin-left:0.5rem">Refresh</button>
+          </div>
+          <div id="zenith-doc-list"><div class="loading">Loading from Google Doc...</div></div>
+        </div>
+
+        <!-- Manually add an action item -->
+        <div class="card">
+          <div class="card-title">Add Action Item</div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <input class="todo-input" id="zenith-title-input" placeholder="Action item title..." style="flex:2; min-width:160px" />
+            <input class="todo-input" id="zenith-link-input" placeholder="Google Doc link (optional)" style="flex:2; min-width:160px" />
+            <button class="btn btn-primary" onclick="addZenithItem()">Add</button>
+          </div>
+        </div>
+
+        <!-- List of existing action items — rendered by zenith.js -->
+        <div class="card">
+          <div class="card-title">Action Items</div>
+          <div id="zenith-list"><div class="empty">No action items yet</div></div>
+        </div>
+
+        <!-- Quick Links for Zenith resources -->
+        <div class="card">
+          <div class="card-title">Quick Links</div>
+          <div class="link-add-row">
+            <input class="todo-input" id="zenith-link-label" placeholder="Link name..." style="flex:1; min-width:120px" onkeydown="if(event.key==='Enter') addLink('zenith')" />
+            <input class="todo-input" id="zenith-link-url" placeholder="https://..." style="flex:2; min-width:180px" onkeydown="if(event.key==='Enter') addLink('zenith')" />
+            <button class="btn btn-primary" onclick="addLink('zenith')">Add Link</button>
+          </div>
+          <div class="link-grid" id="zenith-links"></div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════════
+           MATH TAB  — to-do list and resource links for Math studies
+      ════════════════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-math">
+        <div class="section-header">
+          <span class="section-title">Math</span>
+          <span class="section-badge" style="background:#4ecdc422; color:var(--accent2)">Studies</span>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">To-Do</div>
+            <div class="todo-input-row">
+              <!-- Press Enter or click Add to call addMathTodo() in math.js -->
+              <input class="todo-input" id="math-todo-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter') addMathTodo()" />
+              <button class="btn btn-primary" onclick="addMathTodo()">Add</button>
+            </div>
+            <div id="math-todo-list"><div class="empty">No tasks yet</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Resources</div>
+            <div class="link-add-row">
+              <input class="todo-input" id="math-link-label" placeholder="Link name..." style="flex:1; min-width:100px" onkeydown="if(event.key==='Enter') addLink('math')" />
+              <input class="todo-input" id="math-link-url" placeholder="https://..." style="flex:2; min-width:150px" onkeydown="if(event.key==='Enter') addLink('math')" />
+              <button class="btn btn-primary" onclick="addLink('math')" style="background:var(--accent2); color:#111">Add</button>
+            </div>
+            <div class="link-grid" id="math-links"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════════
+           CODING TAB  — Kanban board + GitHub repos & issues
+      ════════════════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-coding">
+        <div class="section-header">
+          <span class="section-title">Coding Projects</span>
+          <span class="section-badge" style="background:#f7c94822; color:var(--accent3)">GitHub + Kanban</span>
+        </div>
+
+        <!-- ── Kanban Board ────────────────────────────────────────────
+             Three columns: To Do → In Progress → Done
+             Cards can be moved with the arrow buttons rendered by kanban.js -->
+        <div class="kanban">
+          <!-- TO DO column -->
+          <div class="kanban-col">
+            <div class="kanban-col-header"><span class="kanban-dot" style="background:var(--muted)"></span>To Do</div>
+            <div id="kanban-todo"></div>
+            <div class="kanban-add-row">
+              <div class="kanban-add-row-inner">
+                <input class="kanban-input" id="kanban-todo-input" placeholder="Project name..." onkeydown="if(event.key==='Enter') addKanban('todo')" />
+                <button class="btn-small" onclick="addKanban('todo')">+</button>
+              </div>
+              <input class="kanban-repo-input" id="kanban-todo-repo" placeholder="github.com/user/repo (optional)" />
+            </div>
+          </div>
+
+          <!-- IN PROGRESS column -->
+          <div class="kanban-col">
+            <div class="kanban-col-header"><span class="kanban-dot" style="background:var(--accent3)"></span>In Progress</div>
+            <div id="kanban-inprogress"></div>
+            <div class="kanban-add-row">
+              <div class="kanban-add-row-inner">
+                <input class="kanban-input" id="kanban-inprogress-input" placeholder="Project name..." onkeydown="if(event.key==='Enter') addKanban('inprogress')" />
+                <button class="btn-small" onclick="addKanban('inprogress')">+</button>
+              </div>
+              <input class="kanban-repo-input" id="kanban-inprogress-repo" placeholder="github.com/user/repo (optional)" />
+            </div>
+          </div>
+
+          <!-- DONE column -->
+          <div class="kanban-col">
+            <div class="kanban-col-header"><span class="kanban-dot" style="background:var(--accent2)"></span>Done</div>
+            <div id="kanban-done"></div>
+            <div class="kanban-add-row">
+              <div class="kanban-add-row-inner">
+                <input class="kanban-input" id="kanban-done-input" placeholder="Project name..." onkeydown="if(event.key==='Enter') addKanban('done')" />
+                <button class="btn-small" onclick="addKanban('done')">+</button>
+              </div>
+              <input class="kanban-repo-input" id="kanban-done-repo" placeholder="github.com/user/repo (optional)" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ── GitHub Repositories grid ──────────────────────────────── -->
+        <div class="card" style="margin-top:1.5rem; margin-bottom:1.1rem">
+          <div class="card-header-row" style="margin-bottom:0.85rem">
+            <span class="card-title" style="margin:0">Repositories</span>
+            <span id="gh-repo-count" style="font-size:0.78rem; color:var(--muted); margin-left:0.5rem"></span>
+          </div>
+          <div id="gh-repos"><div class="empty">Enter your GitHub username below</div></div>
+        </div>
+
+        <!-- ── Open Issues & Pull Requests ────────────────────────────── -->
+        <div class="card" style="margin-bottom:1.1rem">
+          <div class="card-header-row" style="margin-bottom:0.85rem">
+            <span class="card-title" style="margin:0">Open Issues &amp; PRs</span>
+            <span style="font-size:0.75rem; color:var(--muted); margin-left:0.5rem">requires PAT</span>
+          </div>
+          <div id="gh-issues"><div class="empty">Enter a Personal Access Token to load issues &amp; PRs</div></div>
+        </div>
+
+        <!-- ── GitHub settings (username + PAT input) ─────────────────── -->
+        <div class="card" style="margin-bottom:1.1rem">
+          <div class="card-header-row" style="margin-bottom:0.85rem">
+            <span class="card-title" style="margin:0">GitHub</span>
+            <button class="refresh-btn" onclick="loadGitHub()">Refresh</button>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.9rem">
+            <input class="todo-input" id="gh-username" placeholder="GitHub username..." style="flex:1; min-width:160px; font-size:0.9rem" onkeydown="if(event.key==='Enter') loadGitHub()" />
+            <!-- type="password" hides the PAT so it doesn't show on screen -->
+            <input class="todo-input" id="gh-pat" type="password" placeholder="Personal Access Token (optional, for issues/PRs)" style="flex:2; min-width:220px; font-size:0.9rem; font-family:'DM Mono',monospace" onkeydown="if(event.key==='Enter') loadGitHub()" />
+            <button class="btn btn-primary" onclick="loadGitHub()">Load</button>
+          </div>
+          <div id="gh-status" style="font-size:0.8rem; color:var(--muted); min-height:1em"></div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════════
+           EXAMS & EVENTS TAB  — Google Calendar + custom exam tracker
+      ════════════════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-exams">
+        <div class="section-header">
+          <span class="section-title">Exams &amp; Events</span>
+          <span class="section-badge" style="background:#4a9eff22; color:var(--accent5)">Calendar + Exams</span>
+        </div>
+
+        <!-- Google Calendar mini-grid -->
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title" style="margin:0">Google Calendar</span>
+            <button class="refresh-btn" onclick="loadCalendarEvents()">Refresh</button>
+          </div>
+          <!-- calendar.js fills this with the month grid -->
+          <div id="cal-container"><div class="cal-loading">Loading calendar...</div></div>
+        </div>
+
+        <hr class="events-section-divider" />
+
+        <!-- Add a new event to Google Calendar -->
+        <div class="section-header" style="margin-top:0.5rem">
+          <span class="section-title" style="font-size:1.1rem">Add Event</span>
+          <span class="section-badge" style="background:#4ecdc422; color:var(--accent2)">Saves to Google Calendar</span>
+        </div>
+        <div class="card">
+          <div class="exam-add-form" style="align-items:center">
+            <input class="exam-input" id="ev-name" placeholder="Event name..." style="flex:3; min-width:180px" />
+            <input class="exam-input" id="ev-start" type="date" style="flex:1; min-width:140px" title="Start date" />
+            <span style="color:var(--muted); font-size:0.82rem; white-space:nowrap">to (optional)</span>
+            <input class="exam-input" id="ev-end" type="date" style="flex:1; min-width:140px" title="End date (optional, for multi-day events)" />
+            <button class="btn btn-primary" onclick="addCalendarEvent()" style="background:var(--accent5)">Add to Calendar</button>
+          </div>
+          <div id="ev-status" style="font-size:0.82rem; color:var(--muted); margin-top:0.4rem; min-height:1.1em"></div>
+        </div>
+
+        <!-- Exam tracker (custom, stored in dashboard-data.json) -->
+        <div class="section-header" style="margin-top:1.5rem">
+          <span class="section-title" style="font-size:1.1rem">Exams</span>
+        </div>
+        <div class="card">
+          <!-- Form to add a new exam -->
+          <div class="exam-add-form">
+            <input class="exam-input" id="exam-name" placeholder="Exam name..." style="flex:3; min-width:180px" />
+            <input class="exam-input" id="exam-date" type="date" style="flex:1; min-width:130px" />
+            <button class="btn btn-primary" onclick="addExam()">Add Exam</button>
+          </div>
+          <!-- exams.js fills this list in -->
+          <div id="exam-list"><div class="empty">No exams yet</div></div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════════
+           GOOGLE DATA TAB  — Gmail unread + recent Drive files
+      ════════════════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-google">
+        <div class="section-header">
+          <span class="section-title">Google Data</span>
+          <span class="section-badge" style="background:#7c6af722; color:var(--accent)">Live from your account</span>
+        </div>
+
+        <!-- Unread Gmail -->
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title" style="margin:0">Unread Gmail</span>
+            <div style="display:flex; gap:0.5rem; align-items:center">
+              <a href="https://mail.google.com/" target="_blank" class="refresh-btn" style="text-decoration:none">Open Gmail</a>
+              <button class="refresh-btn" onclick="markAllRead(this)" style="background:rgba(247,106,106,0.12); color:var(--accent4); border-color:rgba(247,106,106,0.3)">Mark All Read</button>
+              <button class="refresh-btn" onclick="loadGmail()">Refresh</button>
+            </div>
+          </div>
+          <!-- google_data.js fills this in -->
+          <div id="gmail-list"><div class="loading">Loading...</div></div>
+        </div>
+
+        <!-- Recent Drive files -->
+        <div class="card">
+          <div class="card-header-row">
+            <span class="card-title" style="margin:0">Recent Drive Files</span>
+            <button class="refresh-btn" onclick="loadDrive()">Refresh</button>
+          </div>
+          <!-- google_data.js fills this in -->
+          <div id="drive-list"><div class="loading">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════════
+           TIMESHEET TAB  — work hours synced with Google Sheets
+      ════════════════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-timesheet">
+        <div class="section-header">
+          <span class="section-title">Timesheet</span>
+          <span class="section-badge" style="background:#4ecdc422; color:var(--accent2)">Synced with Google Sheets</span>
+          <button class="refresh-btn" onclick="loadTimesheet()" style="margin-left:auto">Refresh</button>
+        </div>
+        <div class="card" style="margin-bottom:1rem">
+          <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap">
+            <!-- Label text is set by timesheet.js after it knows what the next month is -->
+            <button id="ts-add-btn" class="btn btn-primary" onclick="addTimesheetMonth()" style="padding:0.35rem 0.9rem; font-size:0.85rem">Add Next Month</button>
+            <span id="ts-add-status" style="font-size:0.8rem; color:var(--muted)"></span>
+          </div>
+        </div>
+        <!-- timesheet.js fills this in with collapsible month tables -->
+        <div id="timesheet-container"><div class="loading">Select this tab to load...</div></div>
+      </div>
+
+    </div><!-- end .content -->
+  </div><!-- end #app -->
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       AI CHAT PANEL
+       Fixed to the bottom-right corner.  Clicking the ✦ button toggles
+       the chat panel open/closed (handled by toggleChat() in chat.js).
+  ══════════════════════════════════════════════════════════════════════════ -->
+
+  <!-- The floating button in the corner -->
+  <button id="chat-btn" onclick="toggleChat()" title="Ask AI">✦</button>
+
+  <!-- The chat window itself (hidden by default, shown when .open class is added) -->
+  <div id="chat-panel">
+    <div class="chat-header">
+      <div class="chat-header-dot"></div>
+      <div>
+        <div class="chat-header-title">Utopia AI</div>
+        <div class="chat-header-sub">Powered by Groq</div>
+      </div>
+      <button onclick="toggleChat()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0.2rem">✕</button>
+    </div>
+
+    <!-- Messages appear here, scrollable -->
+    <div id="chat-messages">
+      <div class="chat-msg ai">Hey Sid! Ask me anything about your dashboard — I can find your tasks, summarize what's coming up, or add new items for you.</div>
+    </div>
+
+    <!-- Text input + send button at the bottom of the chat -->
+    <div class="chat-input-row">
+      <!-- Pressing Enter (without Shift) sends the message -->
+      <input id="chat-input" placeholder="Ask anything..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" />
+      <button id="chat-send" onclick="sendChat()">➤</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       JAVASCRIPT FILES
+       These are loaded at the END of the body (after the HTML) so that by
+       the time the scripts run, all the HTML elements above already exist.
+
+       Load order matters here:
+         1. config.js   — defines the SERVER variable everything else needs
+         2. state.js    — defines the `state` object and load/save helpers
+         3. Feature JS  — each file handles one section of the page
+         4. main.js     — renderAll() calls all the render functions
+         5. auth.js     — LAST, because it kicks off the whole app on page load
+  ══════════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Step 1: SERVER URL (must be first — everything else uses it) -->
+  <script src="{{ url_for('static', filename='js/config.js') }}"></script>
+
+  <!-- Step 2: App state -->
+  <script src="{{ url_for('static', filename='js/state.js') }}"></script>
+
+  <!-- Step 3: Tab switching -->
+  <script src="{{ url_for('static', filename='js/tabs.js') }}"></script>
+
+  <!-- Step 3: Feature modules (order within this group doesn't matter) -->
+  <script src="{{ url_for('static', filename='js/zenith.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/math.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/kanban.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/github.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/exams.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/links.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/google_data.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/timesheet.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/stars.js') }}"></script>
+
+  <!-- Step 4: renderAll — must come after all the render functions above -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+  <!-- Step 5: Auth — boots the whole app, must come last -->
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+
+</body>
+</html>
