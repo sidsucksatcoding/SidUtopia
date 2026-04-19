@@ -33,7 +33,7 @@ How to deploy on Render:
 """
 import os
 
-from flask import Flask, render_template
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 
 from config import PORT
@@ -59,10 +59,12 @@ os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 #
 # We use BASE_DIR (the project root) so these paths are correct whether the
 # server is started from the project root or from inside src/.
+_TEMPLATES = os.path.join(_ROOT_DIR, "templates")   # project_root/templates/
+_STATIC    = os.path.join(_ROOT_DIR, "static")       # project_root/static/
+
 app = Flask(
     __name__,
-    template_folder=os.path.join(_ROOT_DIR, "templates"),   # project_root/templates/
-    static_folder=os.path.join(_ROOT_DIR, "static"),         # project_root/static/
+    static_folder=_STATIC,
     static_url_path="/static",
 )
 
@@ -81,8 +83,8 @@ CORS(app)
 # render_template("index.html") reads templates/index.html and sends it.
 @app.route("/")
 def serve_index():
-    """Serve the single-page dashboard HTML."""
-    return render_template("index.html")
+    """Serve the single-page dashboard HTML directly (no Jinja2 templating needed)."""
+    return send_from_directory(_TEMPLATES, "index.html")
 
 
 # ── Register Blueprints ───────────────────────────────────────────────────────
