@@ -36,7 +36,14 @@ import os
 from flask import Flask, render_template
 from flask_cors import CORS
 
-from config import BASE_DIR, PORT
+from config import PORT
+
+# ── Compute paths relative to THIS file (server.py lives in src/) ─────────────
+# os.path.abspath(__file__) always returns the full absolute path to server.py,
+# even when gunicorn changes the working directory with --chdir.
+# Flask uses this exact technique internally for its own root_path.
+_SRC_DIR  = os.path.dirname(os.path.abspath(__file__))   # …/src
+_ROOT_DIR = os.path.dirname(_SRC_DIR)                     # project root (one level up)
 
 # ── Allow HTTP (not just HTTPS) during local development ──────────────────────
 # OAuth normally requires HTTPS for security.  This environment variable tells
@@ -54,8 +61,8 @@ os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 # server is started from the project root or from inside src/.
 app = Flask(
     __name__,
-    template_folder=str(BASE_DIR / "templates"),   # project_root/templates/
-    static_folder=str(BASE_DIR / "static"),         # project_root/static/
+    template_folder=os.path.join(_ROOT_DIR, "templates"),   # project_root/templates/
+    static_folder=os.path.join(_ROOT_DIR, "static"),         # project_root/static/
     static_url_path="/static",
 )
 
