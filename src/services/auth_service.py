@@ -26,6 +26,7 @@ Where is the token stored?
 import json
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest
@@ -64,7 +65,7 @@ def save_tokens(creds: Credentials) -> None:
     TOKEN_FILE.write_text(json.dumps(data))
 
 
-def load_tokens() -> Credentials | None:
+def load_tokens() -> Optional[Credentials]:
     """Read tokens.json and return valid Google credentials.
 
     Steps:
