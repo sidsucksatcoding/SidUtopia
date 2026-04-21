@@ -26,12 +26,11 @@ A1 notation:
 ══════════════════════════════════════════════════════════════════════════════
 """
 import logging
+import socket
 import calendar as cal_module
 from datetime import datetime as dt
 
-import httplib2
 from flask import Blueprint, request, jsonify
-from google.auth.transport import httplib2 as google_httplib2
 from googleapiclient.discovery import build
 
 from config import TIMESHEET_ID
@@ -39,18 +38,19 @@ from routes import require_auth
 
 
 def _sheets(creds):
-    """Build a Google Sheets service with a 20-second timeout.
+    """Build a Google Sheets service with a 20-second socket timeout.
 
     Without a timeout, the underlying HTTP call can hang indefinitely.
     Gunicorn's default worker timeout is 30 seconds — if a Google API
     call exceeds that, gunicorn kills the worker and Render returns 502.
-    Setting a 20-second timeout means we always return a proper error
-    response before gunicorn can cut us off.
+    Setting a 20-second socket timeout means we always return a proper
+    error response before gunicorn can cut us off.
+
+    socket.setdefaulttimeout affects all new socket connections made in
+    this thread, including the ones the Google API client opens internally.
     """
-    authed_http = google_httplib2.AuthorizedHttp(
-        creds, http=httplib2.Http(timeout=20)
-    )
-    return build("sheets", "v4", http=authed_http, cache_discovery=False)
+    socket.setdefaulttimeout(20)
+    return build("sheets", "v4", credentials=creds, cache_discovery=False)
 
 bp = Blueprint("timesheet", __name__)
 logger = logging.getLogger(__name__)
