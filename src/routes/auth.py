@@ -110,6 +110,32 @@ def auth_status():
     return jsonify({"loggedIn": creds is not None and creds.valid})
 
 
+@bp.route("/auth/refresh-token")
+def auth_refresh_token():
+    """Return the current refresh token so it can be saved as a Render env var.
+
+    This is a one-time setup route.  After logging in:
+      1. Visit  /auth/refresh-token  in your browser.
+      2. Copy the token value shown.
+      3. Go to Render → your service → Environment → add:
+           GOOGLE_REFRESH_TOKEN = <paste the value>
+      4. Redeploy.  From now on the server re-authenticates itself on every
+         restart without you having to log in again.
+
+    The refresh token is like a long-lived master key — keep it secret.
+    """
+    creds = load_tokens()
+    if not creds or not creds.refresh_token:
+        return jsonify({"error": "Not logged in — connect Google first"}), 401
+    return jsonify({
+        "refresh_token": creds.refresh_token,
+        "instructions": (
+            "Copy 'refresh_token' above. In Render: your service → "
+            "Environment → add variable GOOGLE_REFRESH_TOKEN = <paste value> → Save & Deploy."
+        ),
+    })
+
+
 @bp.route("/auth/signout")
 def auth_signout():
     """Delete tokens.json, effectively logging the user out.

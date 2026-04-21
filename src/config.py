@@ -75,6 +75,14 @@ DATA_FILE  = BASE_DIR / "dashboard-data.json"
 GOOGLE_CLIENT_ID     = os.environ["GOOGLE_CLIENT_ID"]
 GOOGLE_CLIENT_SECRET = os.environ["GOOGLE_CLIENT_SECRET"]
 
+# ── Persisted refresh token (solves Render ephemeral storage problem) ─────────
+# Render's free tier wipes the file system on every restart, so tokens.json
+# disappears and the user has to log in again.  The fix: after logging in once,
+# copy your refresh token from /auth/refresh-token and paste it here in Render's
+# Environment Variables dashboard.  The refresh token is long-lived (months/years)
+# and lets the server silently re-authenticate itself on every restart.
+GOOGLE_REFRESH_TOKEN = os.environ.get("GOOGLE_REFRESH_TOKEN", "")
+
 # The URL Google redirects to after the user grants/denies permission.
 # Must exactly match what you registered in Google Cloud Console.
 REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:3000/auth/callback")

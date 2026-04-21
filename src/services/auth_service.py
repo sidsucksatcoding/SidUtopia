@@ -31,7 +31,7 @@ from typing import Optional
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest
 
-from config import TOKEN_FILE, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SCOPES
+from config import TOKEN_FILE, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, SCOPES
 
 # Each module gets its own named logger so log messages show where they came from
 logger = logging.getLogger(__name__)
@@ -79,9 +79,31 @@ def load_tokens() -> Optional[Credentials]:
     Returns:
         A valid Credentials object, or None if not logged in / token is broken.
     """
-    # If the file doesn't exist, the user has never logged in (or signed out)
+    # ── Fallback: rebuild from the persisted refresh token env var ───────────────
+    # On Render's free tier the file system is wiped on every restart, so
+    # tokens.json disappears.  If the GOOGLE_REFRESH_TOKEN env var is set (the
+    # user copied it from /auth/refresh-token and pasted it into Render), we can
+    # reconstruct credentials without requiring the user to log in again.
     if not TOKEN_FILE.exists():
-        return None
+        if GOOGLE_REFRESH_TOKEN:
+            logger.info("tokens.json missing — rebuilding from GOOGLE_REFRESH_TOKEN env var")
+            creds = Credentials(
+                token=None,                        # no access token yet — will be refreshed below
+                refresh_token=GOOGLE_REFRESH_TOKEN,
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=GOOGLE_CLIENT_ID,
+                client_secret=GOOGLE_CLIENT_SECRET,
+                scopes=SCOPES,
+            )
+            try:
+                creds.refresh(GoogleRequest())     # get a fresh access token from Google
+                save_tokens(creds)                 # write tokens.json for this session
+                logger.info("Successfully refreshed token from env var")
+                return creds
+            except Exception as e:
+                logger.warning("Could not refresh from GOOGLE_REFRESH_TOKEN: %s", e)
+                return None
+        return None   # no file and no env var — user must log in
 
     # Read the file contents and parse the JSON into a Python dictionary
     data = json.loads(TOKEN_FILE.read_text())
