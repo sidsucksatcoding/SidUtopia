@@ -215,6 +215,17 @@ async function onTsCellBlur(el) {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ row: sheetRow, col: sheetCol, value: formatted, sheet_name: sheetName }),
     });
+
+    // Check HTTP status BEFORE trying to parse JSON.
+    // A 502 (server overloaded) returns an empty body — calling .json() on it
+    // throws "SyntaxError: Unexpected end of JSON input".
+    if (!res.ok) {
+      el.classList.add('save-error');
+      console.error('Timesheet save failed: HTTP', res.status, { sheetRow, sheetCol, sheetName });
+      el.classList.remove('saving');
+      return;
+    }
+
     const json = await res.json();
     if (json.success) {
       // Update data-original so a second click-away doesn't re-trigger a save

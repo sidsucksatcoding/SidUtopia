@@ -29,11 +29,28 @@ import logging
 import calendar as cal_module
 from datetime import datetime as dt
 
+import httplib2
 from flask import Blueprint, request, jsonify
+from google.auth.transport import httplib2 as google_httplib2
 from googleapiclient.discovery import build
 
 from config import TIMESHEET_ID
 from routes import require_auth
+
+
+def _sheets(creds):
+    """Build a Google Sheets service with a 20-second timeout.
+
+    Without a timeout, the underlying HTTP call can hang indefinitely.
+    Gunicorn's default worker timeout is 30 seconds — if a Google API
+    call exceeds that, gunicorn kills the worker and Render returns 502.
+    Setting a 20-second timeout means we always return a proper error
+    response before gunicorn can cut us off.
+    """
+    authed_http = google_httplib2.AuthorizedHttp(
+        creds, http=httplib2.Http(timeout=20)
+    )
+    return build("sheets", "v4", http=authed_http, cache_discovery=False)
 
 bp = Blueprint("timesheet", __name__)
 logger = logging.getLogger(__name__)
@@ -85,7 +102,7 @@ def api_timesheet(creds):
                      "dates": [...], "rows": [...]}, ...]}
     """
     try:
-        sheets_svc = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        sheets_svc = _sheets(creds)
 
         # Get spreadsheet metadata — this tells us what tabs exist
         meta = sheets_svc.spreadsheets().get(spreadsheetId=TIMESHEET_ID).execute()
@@ -202,7 +219,7 @@ def api_timesheet_update(creds):
         # Build the A1 cell reference, e.g. "'April 2026'!E3"
         cell_ref   = f"'{sheet_name}'!{_col_letter(sheet_col)}{sheet_row}"
 
-        sheets_svc = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        sheets_svc = _sheets(creds)
         sheets_svc.spreadsheets().values().update(
             spreadsheetId=TIMESHEET_ID,
             range=cell_ref,
@@ -241,7 +258,7 @@ def api_timesheet_add_month(creds):
         month     = int(body["month"])
         tab_title = f"{MONTH_NAMES[month - 1]} {year}"   # e.g. "May 2026"
 
-        sheets_svc      = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        sheets_svc      = _sheets(creds)
         meta            = sheets_svc.spreadsheets().get(spreadsheetId=TIMESHEET_ID).execute()
         existing_titles = [s["properties"]["title"] for s in meta["sheets"]]
 
@@ -324,7 +341,7 @@ def api_timesheet_delete_month(creds):
         body      = request.get_json()
         tab_title = body["month_key"]   # the tab display name, e.g. "April 2026"
 
-        sheets_svc = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        sheets_svc = _sheets(creds)
         meta       = sheets_svc.spreadsheets().get(spreadsheetId=TIMESHEET_ID).execute()
 
         # Find the internal sheetId for the tab with this title
