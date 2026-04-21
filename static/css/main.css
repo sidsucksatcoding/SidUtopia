@@ -597,6 +597,7 @@ details[open] summary > span.ts-arrow { transform: rotate(90deg); }
 .ts-cell:not(:empty) { color: var(--text); }
 .ts-cell:focus { outline: none; border-color: var(--accent3); background: rgba(255,255,255,0.07); color: var(--text); }
 .ts-cell.saving { opacity: 0.4; pointer-events: none; }
+.ts-cell.save-error { color: var(--accent4) !important; outline: 1px solid var(--accent4); }
 .ts-week-tabs { display: flex; gap: 0.35rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
 .ts-week-tab {
   padding: 0.3rem 0.9rem; border-radius: 7px; border: 1px solid var(--border);

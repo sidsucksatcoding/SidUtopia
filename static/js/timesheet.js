@@ -207,7 +207,8 @@ async function onTsCellBlur(el) {
   const sheetCol  = parseInt(el.dataset.col);
   const sheetName = el.dataset.sheet;
 
-  el.classList.add('saving');   // shows a subtle visual indicator while saving
+  el.classList.add('saving');   // gray = saving in progress
+  el.classList.remove('save-error');
   try {
     const res  = await fetch(`${SERVER}/api/timesheet/update`, {
       method:  'POST',
@@ -215,9 +216,18 @@ async function onTsCellBlur(el) {
       body:    JSON.stringify({ row: sheetRow, col: sheetCol, value: formatted, sheet_name: sheetName }),
     });
     const json = await res.json();
-    // Update data-original so a second click-away doesn't re-trigger a save
-    if (json.success) el.dataset.original = formatted;
-  } catch(e) { console.error('Timesheet update failed', e); }
+    if (json.success) {
+      // Update data-original so a second click-away doesn't re-trigger a save
+      el.dataset.original = formatted;
+    } else {
+      // Server returned an error — turn the cell red so the user knows
+      el.classList.add('save-error');
+      console.error('Timesheet save failed:', json.error, { sheetRow, sheetCol, sheetName, formatted });
+    }
+  } catch(e) {
+    el.classList.add('save-error');
+    console.error('Timesheet update network error:', e);
+  }
   el.classList.remove('saving');
 }
 

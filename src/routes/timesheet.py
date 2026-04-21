@@ -85,7 +85,7 @@ def api_timesheet(creds):
                      "dates": [...], "rows": [...]}, ...]}
     """
     try:
-        sheets_svc = build("sheets", "v4", credentials=creds)
+        sheets_svc = build("sheets", "v4", credentials=creds, cache_discovery=False)
 
         # Get spreadsheet metadata — this tells us what tabs exist
         meta = sheets_svc.spreadsheets().get(spreadsheetId=TIMESHEET_ID).execute()
@@ -202,13 +202,14 @@ def api_timesheet_update(creds):
         # Build the A1 cell reference, e.g. "'April 2026'!E3"
         cell_ref   = f"'{sheet_name}'!{_col_letter(sheet_col)}{sheet_row}"
 
-        sheets_svc = build("sheets", "v4", credentials=creds)
+        sheets_svc = build("sheets", "v4", credentials=creds, cache_discovery=False)
         sheets_svc.spreadsheets().values().update(
             spreadsheetId=TIMESHEET_ID,
             range=cell_ref,
             valueInputOption="USER_ENTERED",  # interprets "2:30" as a time value
             body={"values": [[value]]},       # 2D array: [[single cell value]]
         ).execute()
+        logger.info("Saved %s → %s = %r", sheet_name, cell_ref, value)
         return jsonify({"success": True})
 
     except Exception as e:
@@ -240,7 +241,7 @@ def api_timesheet_add_month(creds):
         month     = int(body["month"])
         tab_title = f"{MONTH_NAMES[month - 1]} {year}"   # e.g. "May 2026"
 
-        sheets_svc      = build("sheets", "v4", credentials=creds)
+        sheets_svc      = build("sheets", "v4", credentials=creds, cache_discovery=False)
         meta            = sheets_svc.spreadsheets().get(spreadsheetId=TIMESHEET_ID).execute()
         existing_titles = [s["properties"]["title"] for s in meta["sheets"]]
 
@@ -323,7 +324,7 @@ def api_timesheet_delete_month(creds):
         body      = request.get_json()
         tab_title = body["month_key"]   # the tab display name, e.g. "April 2026"
 
-        sheets_svc = build("sheets", "v4", credentials=creds)
+        sheets_svc = build("sheets", "v4", credentials=creds, cache_discovery=False)
         meta       = sheets_svc.spreadsheets().get(spreadsheetId=TIMESHEET_ID).execute()
 
         # Find the internal sheetId for the tab with this title
