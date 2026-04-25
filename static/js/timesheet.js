@@ -187,57 +187,67 @@ function switchTsWeek(mKey, weekIdx) {
 }
 
 
+// ── _tsSaveCell ───────────────────────────────────────────────────────────────
+// Makes one attempt to POST a cell value to the server.
+// Returns true on success, false on any failure (HTTP error or network error).
+async function _tsSaveCell(sheetRow, sheetCol, sheetName, value) {
+  try {
+    const res = await fetch(`${SERVER}/api/timesheet/update`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ row: sheetRow, col: sheetCol, value, sheet_name: sheetName }),
+    });
+    if (!res.ok) {
+      console.warn('Timesheet save HTTP', res.status, { sheetRow, sheetCol, sheetName });
+      return false;
+    }
+    const json = await res.json();
+    if (!json.success) {
+      console.warn('Timesheet save server error:', json.error, { sheetRow, sheetCol, sheetName });
+      return false;
+    }
+    return true;
+  } catch(e) {
+    console.warn('Timesheet save network error:', e);
+    return false;
+  }
+}
+
+
 // ── onTsCellBlur ──────────────────────────────────────────────────────────────
 // Called when the user clicks away from an editable timesheet cell (onblur).
 // Formats the value, compares it to the original, and saves if it changed.
+// Retries once after 4 seconds if the first attempt fails (handles transient 502s).
 async function onTsCellBlur(el) {
-  // el.textContent is whatever the user typed
   const raw      = el.textContent.trim();
   const stripped = /^\d+:\d{2}$/.test(raw) ? raw : raw.replace(/[hm]$/i, '').trim();
   const formatted = formatTimeDisplay(stripped);
 
-  // Auto-correct the cell display to the normalised format
   if (el.textContent.trim() !== formatted) el.textContent = formatted;
 
-  // data-original was set when the cell was first rendered — compare to detect changes
   const original = el.dataset.original || '';
-  if (formatted === original) return;   // nothing changed — skip the API call
+  if (formatted === original) return;
 
   const sheetRow  = parseInt(el.dataset.row);
   const sheetCol  = parseInt(el.dataset.col);
   const sheetName = el.dataset.sheet;
 
-  el.classList.add('saving');   // gray = saving in progress
+  el.classList.add('saving');
   el.classList.remove('save-error');
-  try {
-    const res  = await fetch(`${SERVER}/api/timesheet/update`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ row: sheetRow, col: sheetCol, value: formatted, sheet_name: sheetName }),
-    });
 
-    // Check HTTP status BEFORE trying to parse JSON.
-    // A 502 (server overloaded) returns an empty body — calling .json() on it
-    // throws "SyntaxError: Unexpected end of JSON input".
-    if (!res.ok) {
-      el.classList.add('save-error');
-      console.error('Timesheet save failed: HTTP', res.status, { sheetRow, sheetCol, sheetName });
-      el.classList.remove('saving');
-      return;
-    }
+  let ok = await _tsSaveCell(sheetRow, sheetCol, sheetName, formatted);
 
-    const json = await res.json();
-    if (json.success) {
-      // Update data-original so a second click-away doesn't re-trigger a save
-      el.dataset.original = formatted;
-    } else {
-      // Server returned an error — turn the cell red so the user knows
-      el.classList.add('save-error');
-      console.error('Timesheet save failed:', json.error, { sheetRow, sheetCol, sheetName, formatted });
-    }
-  } catch(e) {
+  if (!ok) {
+    // First attempt failed — wait 4 s then retry once
+    await new Promise(r => setTimeout(r, 4000));
+    ok = await _tsSaveCell(sheetRow, sheetCol, sheetName, formatted);
+  }
+
+  if (ok) {
+    el.dataset.original = formatted;
+  } else {
     el.classList.add('save-error');
-    console.error('Timesheet update network error:', e);
+    console.error('Timesheet save failed after retry', { sheetRow, sheetCol, sheetName, formatted });
   }
   el.classList.remove('saving');
 }
